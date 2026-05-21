@@ -1,7 +1,8 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
 using CoffeeHouseAdmin.Data;
-using Microsoft.EntityFrameworkCore;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,8 +15,7 @@ builder.Services.AddHttpContextAccessor();
 
 // Kết nối Database (Chỗ này đã xóa )
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
-// Cấu hình Session (Chỉ cần gọi 1 lần duy nhất này thôi Boss nhé)
+options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"));// Cấu hình Session (Chỉ cần gọi 1 lần duy nhất này thôi Boss nhé)
 builder.Services.AddSession(options => {
     options.IdleTimeout = TimeSpan.FromMinutes(30); // Khách có 30 phút để áp mã và thanh toán
     options.Cookie.HttpOnly = true;
@@ -42,10 +42,12 @@ var app = builder.Build();
 
 // --- 3. CẤU HÌNH PIPELINE (MIDDLEWARE) ---
 
-if (!app.Environment.IsDevelopment()) {
-    app.UseExceptionHandler("/Home/Error");
-    app.UseHsts();
-}
+// if (!app.Environment.IsDevelopment()) {
+//     app.UseExceptionHandler("/Home/Error");
+//     app.UseHsts();
+// }
+// Chèn dòng thần thánh này vào để ép web hiện chi tiết lỗi đỏ lòm
+app.UseDeveloperExceptionPage();
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();

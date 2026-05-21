@@ -1,29 +1,26 @@
-# 1. Khởi tạo môi trường chạy
+# 1. Khởi tạo môi trường chạy ứng dụng .NET 8
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
 WORKDIR /app
 EXPOSE 80
 EXPOSE 443
 
-# 2. Khởi tạo môi trường build code
+# 2. Môi trường biên dịch code
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
-# Sao chép file giải pháp .sln và tìm nạp tất cả các file .csproj trong folder con vào
-COPY ["CoffeeHouseAdmin.sln", "."]
-COPY ["CoffeeHouseAdmin.csproj", "CoffeeHouseAdmin/"] 
-# (Nếu file .csproj của Boss viết thường, nhớ sửa chữ trên thành coffeehouseadmin.csproj nha)
+# Copy trực tiếp file dự án vào hệ thống máy ảo
+COPY CoffeeHouseAdmin.csproj .
+RUN dotnet restore CoffeeHouseAdmin.csproj
 
-RUN dotnet restore
-
-# Sao chép toàn bộ code còn lại và tiến hành build
+# Copy toàn bộ đống file còn lại vào và tiến hành build
 COPY . .
-RUN dotnet build -c Release -o /app/build
+RUN dotnet build CoffeeHouseAdmin.csproj -c Release -o /app/build
 
-# 3. Xuất bản file hệ thống
+# 3. Xuất bản file hệ thống .dll
 FROM build AS publish
-RUN dotnet publish -c Release -o /app/publish /p:UseAppHost=false
+RUN dotnet publish CoffeeHouseAdmin.csproj -c Release -o /app/publish /p:UseAppHost=false
 
-# 4. Kích hoạt Server chạy online
+# 4. Kích hoạt server online
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .

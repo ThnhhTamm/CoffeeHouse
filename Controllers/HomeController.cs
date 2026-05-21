@@ -19,13 +19,11 @@ namespace CoffeeHouseAdmin.Controllers
             _context = context;
         }
 
-        // Hàm tiện ích để lấy chuỗi kết nối an toàn tuyệt đối, dán cứng mật khẩu bảo mật Render
-       // Hàm tiện ích lấy chuỗi kết nối NỘI BỘ SIÊU TỐC - Không sợ bị ngắt SSL ngang xương
-// Hàm lấy chuỗi kết nối NỘI BỘ + KÍCH HOẠT SSL TIÊU CHUẨN RENDER
-private string GetSafeConnectionString()
-{
-    return "Server=dpg-d87m9p67r5hc738ph9u0-a.singapore-postgres.render.com;Database=coffeehousedb;Port=5432;User Id=coffeehousedb_user;Password=g5EGgOlb4B0ro32QE8ZTS9rFilgcUBKM;SslMode=Require;Trust Server Certificate=true;";
-}
+        // Hàm lấy chuỗi kết nối nội bộ siêu tốc bảo mật Render
+        private string GetSafeConnectionString()
+        {
+            return "Server=dpg-d87m9p67r5hc738ph9u0-a.singapore-postgres.render.com;Database=coffeehousedb;Port=5432;User Id=coffeehousedb_user;Password=g5EGgOlb4B0ro32QE8ZTS9rFilgcUBKM;SslMode=Require;Trust Server Certificate=true;";
+        }
 
         public async Task<IActionResult> Index(string search, string category, string priceRange, string tableId)
         {
@@ -72,15 +70,21 @@ private string GetSafeConnectionString()
 
             var products = await query.ToListAsync();
 
-            // --- 3. BỐC THỐNG KÊ SAO TỪ DATABASE BẰNG ADO.NET ---
+            // --- 3. BỐC THỐNG KÊ SAO TỰ ĐỘNG LẤY TÊN BẢNG THỰC TẾ ---
             var reviewStats = new Dictionary<int, (double Avg, int Count)>();
-            string connString = GetSafeConnectionString(); // Gọi chuỗi kết nối VIP bảo mật
+            string connString = GetSafeConnectionString();
             
+            // Tự động bốc tên bảng thực tế mà EF Core đã tạo (bao chạy 100%)
+            var entityType = _context.Model.FindEntityType(typeof(ProductReview));
+            string tableName = entityType.GetTableName(); 
+
             using (NpgsqlConnection conn = new NpgsqlConnection(connString))
             {
-                string sqlStats = @"SELECT productid, AVG(CAST(rating AS DECIMAL(18,1))) AS AvgRating, COUNT(*) AS ReviewCount 
-                    FROM productreviews 
-                    GROUP BY productid";
+                // Sử dụng dấu ngoặc kép bọc quanh tên bảng và tên cột chuẩn cấu trúc Postgres
+                string sqlStats = $@"SELECT ""ProductId"", AVG(CAST(""Rating"" AS DECIMAL(18,1))) AS AvgRating, COUNT(*) AS ReviewCount 
+                                    FROM ""{tableName}"" 
+                                    GROUP BY ""ProductId""";
+
                 using (NpgsqlCommand cmdStats = new NpgsqlCommand(sqlStats, conn))
                 {
                     conn.Open();
@@ -101,19 +105,22 @@ private string GetSafeConnectionString()
             return View(products);
         }
 
-        // --- 4. BỔ SUNG LẤY REVIEW SẢN PHẨM ---
+        // --- 4. BỔ SUNG LẤY REVIEW SẢN PHẨM TỰ ĐỘNG LẤY TÊN BẢNG ---
         [HttpGet]
         public async Task<IActionResult> GetProductReviews(int productId)
         {
             var reviews = new List<object>();
-            string connString = GetSafeConnectionString(); // Gọi chuỗi kết nối VIP bảo mật
+            string connString = GetSafeConnectionString();
             
             try {
+                var entityType = _context.Model.FindEntityType(typeof(ProductReview));
+                string tableName = entityType.GetTableName();
+
                 using (NpgsqlConnection conn = new NpgsqlConnection(connString)) {
-                    string sql = @"SELECT customername, rating, comment, createdat 
-               FROM productreviews 
-               WHERE productid = @pid 
-               ORDER BY createdat DESC";
+                    string sql = $@"SELECT ""CustomerName"", ""Rating"", ""Comment"", ""CreatedAt"" 
+                                   FROM ""{tableName}"" 
+                                   WHERE ""ProductId"" = @pid 
+                                   ORDER BY ""CreatedAt"" DESC";
                                    
                     using (NpgsqlCommand cmd = new NpgsqlCommand(sql, conn)) {
                         cmd.Parameters.AddWithValue("@pid", productId);
@@ -122,10 +129,10 @@ private string GetSafeConnectionString()
                         using (var reader = await cmd.ExecuteReaderAsync()) {
                             while (await reader.ReadAsync()) {
                                 reviews.Add(new {
-                                   customer = reader["customername"].ToString(),
-rating = Convert.ToInt32(reader["rating"]),
-comment = reader["comment"] != DBNull.Value ? reader["comment"].ToString() : "",
-date = ((DateTime)reader["createdat"]).ToString("dd/MM/yyyy HH:mm")
+                                    customer = reader["CustomerName"].ToString(),
+                                    rating = Convert.ToInt32(reader["Rating"]),
+                                    comment = reader["Comment"] != DBNull.Value ? reader["Comment"].ToString() : "",
+                                    date = ((DateTime)reader["CreatedAt"]).ToString("dd/MM/yyyy HH:mm")
                                 });
                             }
                         }

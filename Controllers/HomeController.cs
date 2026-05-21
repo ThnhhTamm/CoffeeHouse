@@ -19,6 +19,12 @@ namespace CoffeeHouseAdmin.Controllers
             _context = context;
         }
 
+        // Hàm tiện ích để lấy chuỗi kết nối an toàn tuyệt đối, dán cứng mật khẩu bảo mật Render
+        private string GetSafeConnectionString()
+        {
+            return "Server=dpg-d87m9p67r5hc738ph9u0.singapore-postgres.render.com;Database=coffeehousedb;Port=5432;User Id=coffeehousedb_user;Password=g5EGgOlb4B0ro32QE8ZTS9rFilgcUBKM;SslMode=Require;Trust Server Certificate=true;";
+        }
+
         public async Task<IActionResult> Index(string search, string category, string priceRange, string tableId)
         {
             // --- 1. "BẮT" MÃ BÀN VÀ CẤT VÀO SESSION ---
@@ -64,13 +70,10 @@ namespace CoffeeHouseAdmin.Controllers
 
             var products = await query.ToListAsync();
 
-            // --- 3. BỐC THỐNG KÊ SAO TỪ DATABASE BẰNG ADO.NET (ĐÃ CHUYỂN SANG NPGSQL) ---
+            // --- 3. BỐC THỐNG KÊ SAO TỪ DATABASE BẰNG ADO.NET ---
             var reviewStats = new Dictionary<int, (double Avg, int Count)>();
+            string connString = GetSafeConnectionString(); // Gọi chuỗi kết nối VIP bảo mật
             
-            // Lấy trực tiếp chuỗi kết nối an toàn từ hệ thống
-            string connString = _context.Database.GetDbConnection().ConnectionString;
-            
-            // Ép sử dụng NpgsqlConnection thay cho SqlConnection cũ
             using (NpgsqlConnection conn = new NpgsqlConnection(connString))
             {
                 string sqlStats = @"SELECT ""ProductId"", AVG(CAST(""Rating"" AS DECIMAL(18,1))) AS AvgRating, COUNT(*) AS ReviewCount 
@@ -96,15 +99,14 @@ namespace CoffeeHouseAdmin.Controllers
             return View(products);
         }
 
-        // --- 4. BỔ SUNG LẤY REVIEW SẢN PHẨM (ĐÃ CHUYỂN SANG NPGSQL) ---
+        // --- 4. BỔ SUNG LẤY REVIEW SẢN PHẨM ---
         [HttpGet]
         public async Task<IActionResult> GetProductReviews(int productId)
         {
             var reviews = new List<object>();
-            string connString = _context.Database.GetDbConnection().ConnectionString;
+            string connString = GetSafeConnectionString(); // Gọi chuỗi kết nối VIP bảo mật
             
             try {
-                // Ép sử dụng NpgsqlConnection thay cho SqlConnection cũ
                 using (NpgsqlConnection conn = new NpgsqlConnection(connString)) {
                     string sql = @"SELECT ""CustomerName"", ""Rating"", ""Comment"", ""CreatedAt"" 
                                    FROM ""ProductReviews"" 

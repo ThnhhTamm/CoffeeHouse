@@ -44,13 +44,27 @@ builder.Services.AddAuthentication(options => {
 
 // --- 2. XÂY DỰNG APP ---
 var app = builder.Build();
+// --- TỰ ĐỘNG KHỞI TẠO BẢNG DATABASE NẾU CHƯA CÓ ---
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    try
+    {
+        var context = services.GetRequiredService<ApplicationDbContext>();
+        context.Database.EnsureCreated(); // Lệnh thần thánh tự tạo cấu trúc bảng sang Postgres
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine("Lỗi khởi tạo DB: " + ex.Message);
+    }
+}
 
 // --- 3. CẤU HÌNH PIPELINE (MIDDLEWARE) ---
 
-// if (!app.Environment.IsDevelopment()) {
-//     app.UseExceptionHandler("/Home/Error");
-//     app.UseHsts();
-// }
+if (!app.Environment.IsDevelopment()) {
+    app.UseExceptionHandler("/Home/Error");
+     app.UseHsts();
+ }
 // Chèn dòng thần thánh này vào để ép web hiện chi tiết lỗi đỏ lòm
 app.UseDeveloperExceptionPage();
 

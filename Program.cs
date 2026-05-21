@@ -8,16 +8,21 @@ var builder = WebApplication.CreateBuilder(args);
 
 // --- 1. ĐĂNG KÝ DỊCH VỤ (SERVICES) ---
 
+// --- 1. ĐĂNG KÝ DỊCH VỤ (SERVICES) ---
+
 builder.Services.AddControllersWithViews();
 
 // Dùng để truy cập Session trong View/Controller
 builder.Services.AddHttpContextAccessor();
 
-// Kết nối Database (Chỗ này đã xóa )
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"));// Cấu hình Session (Chỉ cần gọi 1 lần duy nhất này thôi Boss nhé)
+// Kết nối Database PostgreSQL trên Render (Đã đóng ngoặc }); đầy đủ)
+builder.Services.AddDbContext<ApplicationDbContext>(options => {
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"));
+});
+
+// Cấu hình Session
 builder.Services.AddSession(options => {
-    options.IdleTimeout = TimeSpan.FromMinutes(30); // Khách có 30 phút để áp mã và thanh toán
+    options.IdleTimeout = TimeSpan.FromMinutes(30);
     options.Cookie.HttpOnly = true;
     options.Cookie.IsEssential = true;
 });

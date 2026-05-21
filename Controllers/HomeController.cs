@@ -78,9 +78,9 @@ private string GetSafeConnectionString()
             
             using (NpgsqlConnection conn = new NpgsqlConnection(connString))
             {
-                string sqlStats = @"SELECT ""ProductId"", AVG(CAST(""Rating"" AS DECIMAL(18,1))) AS AvgRating, COUNT(*) AS ReviewCount 
-                                    FROM ""ProductReviews"" 
-                                    GROUP BY ""ProductId""";
+                string sqlStats = @"SELECT productid, AVG(CAST(rating AS DECIMAL(18,1))) AS AvgRating, COUNT(*) AS ReviewCount 
+                    FROM productreviews 
+                    GROUP BY productid";
                 using (NpgsqlCommand cmdStats = new NpgsqlCommand(sqlStats, conn))
                 {
                     conn.Open();
@@ -110,10 +110,10 @@ private string GetSafeConnectionString()
             
             try {
                 using (NpgsqlConnection conn = new NpgsqlConnection(connString)) {
-                    string sql = @"SELECT ""CustomerName"", ""Rating"", ""Comment"", ""CreatedAt"" 
-                                   FROM ""ProductReviews"" 
-                                   WHERE ""ProductId"" = @pid 
-                                   ORDER BY ""CreatedAt"" DESC";
+                    string sql = @"SELECT customername, rating, comment, createdat 
+               FROM productreviews 
+               WHERE productid = @pid 
+               ORDER BY createdat DESC";
                                    
                     using (NpgsqlCommand cmd = new NpgsqlCommand(sql, conn)) {
                         cmd.Parameters.AddWithValue("@pid", productId);
@@ -122,10 +122,10 @@ private string GetSafeConnectionString()
                         using (var reader = await cmd.ExecuteReaderAsync()) {
                             while (await reader.ReadAsync()) {
                                 reviews.Add(new {
-                                    customer = reader["CustomerName"].ToString(),
-                                    rating = Convert.ToInt32(reader["Rating"]),
-                                    comment = reader["Comment"] != DBNull.Value ? reader["Comment"].ToString() : "",
-                                    date = ((DateTime)reader["CreatedAt"]).ToString("dd/MM/yyyy HH:mm")
+                                   customer = reader["customername"].ToString(),
+rating = Convert.ToInt32(reader["rating"]),
+comment = reader["comment"] != DBNull.Value ? reader["comment"].ToString() : "",
+date = ((DateTime)reader["createdat"]).ToString("dd/MM/yyyy HH:mm")
                                 });
                             }
                         }

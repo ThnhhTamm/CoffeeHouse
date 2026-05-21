@@ -1,0 +1,159 @@
+@model IEnumerable<CoffeeHouseAdmin.Models.CoffeeTable>
+
+<div class="container-fluid py-4 px-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold d-flex align-items-center" style="color: #3d2b1f;">
+                <i class="fas fa-chair me-3 text-secondary"></i> Quản lý Sơ đồ bàn
+            </h2>
+            <p class="text-muted mb-0">Theo dõi trạng thái và xuất mã QR gọi món cho từng bàn.</p>
+        </div>
+        <button type="button" class="btn text-white px-4 py-2 shadow-sm" style="background: #3d2b1f; border-radius: 12px; font-weight: 500;" data-bs-toggle="modal" data-bs-target="#addTableModal">
+            <i class="fas fa-plus me-2"></i> Thêm bàn mới
+        </button>
+    </div>
+
+    <div class="row g-3 mb-4 text-center">
+        <div class="col"><div class="card border-0 shadow-sm p-3 bg-light" style="border-radius: 15px;"><h3 class="fw-bold">@ViewBag.Total</h3><small class="fw-bold text-muted">Tổng số bàn</small></div></div>
+        <div class="col"><div class="card border-0 shadow-sm p-3 bg-success-subtle" style="border-radius: 15px;"><h3 class="fw-bold text-success">@ViewBag.Available</h3><small class="fw-bold text-success">Bàn trống</small></div></div>
+        <div class="col"><div class="card border-0 shadow-sm p-3 bg-danger-subtle" style="border-radius: 15px;"><h3 class="fw-bold text-danger">@ViewBag.Occupied</h3><small class="fw-bold text-danger">Đang phục vụ</small></div></div>
+        <div class="col"><div class="card border-0 shadow-sm p-3 bg-info-subtle" style="border-radius: 15px;"><h3 class="fw-bold text-info">@ViewBag.Reserved</h3><small class="fw-bold text-info">Đã đặt trước</small></div></div>
+    </div>
+
+    <div class="row g-4">
+        @foreach(var item in Model) {
+            var cardClass = item.Status switch {
+                "Trống" => "border-success",
+                "Đang phục vụ" => "border-danger",
+                "Đã đặt" => "border-info",
+                _ => "border-secondary"
+            };
+            var iconColor = item.Status switch {
+                "Trống" => "text-success opacity-75",
+                "Đang phục vụ" => "text-danger",
+                "Đã đặt" => "text-info",
+                _ => "text-secondary"
+            };
+            
+            string[] statuses = { "Trống", "Đang phục vụ", "Đã đặt" };
+
+            <div class="col-md-4 col-lg-3">
+                <div class="card shadow-sm h-100 border-top-0 border-end-0 border-bottom-0 border-4 @cardClass" style="border-radius: 15px; background-color: #fcfcfc;">
+                    <div class="card-body text-center position-relative p-4">
+                        
+                        <button type="button" class="btn btn-sm btn-light border position-absolute shadow-sm" 
+                                style="top: 15px; right: 15px; border-radius: 10px;"
+                                data-bs-toggle="modal" 
+                                data-bs-target="#qrModal"
+                                data-tablename="@item.TableName"
+                                data-tableid="@item.TableID"
+                                title="Lấy mã QR gọi món">
+                            <i class="fas fa-qrcode fs-5 text-dark"></i>
+                        </button>
+
+                        <h5 class="fw-bold mb-1 mt-2" style="color: #3d2b1f;">@item.TableName</h5>
+                        <p class="text-muted small mb-3"><i class="fas fa-users me-1"></i> @item.Capacity ghế</p>
+                        
+                        <i class="fas fa-mug-hot fa-3x mb-4 @iconColor"></i>
+
+                        <div class="dropdown">
+                            <button class="btn btn-sm w-100 rounded-pill border dropdown-toggle py-2 fw-bold text-muted bg-white shadow-sm" type="button" data-bs-toggle="dropdown">
+                                @item.Status
+                            </button>
+                            <ul class="dropdown-menu shadow-sm w-100 text-center" style="border-radius: 15px;">
+                                @foreach(var stt in statuses) {
+                                    <li>
+                                        <form asp-action="UpdateStatus" method="post">
+                                            <input type="hidden" name="id" value="@item.TableID" />
+                                            <input type="hidden" name="newStatus" value="@stt" />
+                                            <button type="submit" class="dropdown-item py-2 @(item.Status == stt ? "fw-bold bg-light text-primary" : "")">@stt</button>
+                                        </form>
+                                    </li>
+                                }
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+<div class="modal fade" id="qrModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content shadow-lg" style="border-radius: 20px; border: none;">
+            <div class="modal-header bg-light justify-content-center" style="border-radius: 20px 20px 0 0; border-bottom: none;">
+                <h5 class="modal-title fw-bold text-center w-100" style="color: #3d2b1f;">Mã QR Gọi Món</h5>
+                <button type="button" class="btn-close position-absolute end-0 me-3" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center p-4">
+                <h4 class="fw-bold text-danger mb-3" id="qrTableName">Bàn...</h4>
+                
+                <div class="bg-white p-2 rounded shadow-sm d-inline-block mb-3 border">
+                    <img id="qrImage" src="" alt="QR Code" width="200" height="200" />
+                </div>
+                
+                <p class="text-muted small mb-0">Quét mã này để xem Menu<br/>và gọi món cho bàn này.</p>
+            </div>
+            <div class="modal-footer border-top-0 justify-content-center pb-4">
+                <button type="button" class="btn btn-outline-dark fw-bold px-4 rounded-pill" onclick="window.print()">
+                    <i class="fas fa-print me-2"></i> In mã QR
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="addTableModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow" style="border-radius: 20px; border: none;">
+            <div class="modal-header bg-light" style="border-radius: 20px 20px 0 0; border-bottom: none;">
+                <h5 class="modal-title fw-bold" style="color: #3d2b1f;"><i class="fas fa-plus-circle me-2"></i>Thêm Bàn Mới</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            
+            <form asp-action="Create" method="post">
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Tên bàn <span class="text-danger">*</span></label>
+                        <input type="text" name="TableName" class="form-control" style="border-radius: 10px;" required placeholder="VD: Bàn Ngoài Trời 1">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Số lượng ghế ngồi <span class="text-danger">*</span></label>
+                        <input type="number" name="Capacity" class="form-control" style="border-radius: 10px;" required min="1" max="20" value="4">
+                    </div>
+                </div>
+                <div class="modal-footer border-top-0 justify-content-center pb-4">
+                    <button type="button" class="btn btn-light px-4 py-2 fw-bold" style="border-radius: 12px;" data-bs-dismiss="modal">HỦY BỎ</button>
+                    <button type="submit" class="btn btn-dark px-5 py-2 fw-bold" style="border-radius: 12px;">XÁC NHẬN THÊM</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        var qrModal = document.getElementById('qrModal');
+        qrModal.addEventListener('show.bs.modal', function (event) {
+            // Lấy cái nút vừa được bấm
+            var button = event.relatedTarget;
+            
+            // Lấy thông tin Tên bàn và ID bàn
+            var tableName = button.getAttribute('data-tablename');
+            var tableId = button.getAttribute('data-tableid');
+            
+            // Đổi tên bàn trên Popup
+            document.getElementById('qrTableName').textContent = tableName;
+            
+            // Tạo đường dẫn mà khách hàng sẽ truy cập (Giả lập URL Menu quán Boss)
+            var menuUrl = "http://localhost:5111/Menu?tableId=" + tableId;
+            
+            // Dùng API miễn phí để vẽ mã QR tức thì dựa trên URL đó
+            var qrApiUrl = "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=" + encodeURIComponent(menuUrl);
+            
+            // Gắn hình QR vào Popup
+            document.getElementById('qrImage').src = qrApiUrl;
+        });
+    </script>
+}

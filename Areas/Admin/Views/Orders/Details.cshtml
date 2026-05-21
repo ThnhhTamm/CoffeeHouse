@@ -1,0 +1,60 @@
+@model dynamic
+
+<div class="container-fluid py-4 px-4">
+    <a href="/Admin/Orders" class="btn btn-light shadow-sm mb-4 fw-bold text-muted" style="border-radius: 12px;">
+        <i class="fas fa-arrow-left me-2"></i> Quay lại
+    </a>
+
+    <div class="row">
+        @* --- Cột trái: Thông tin khách & Tổng quan --- *@
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm p-4 mb-4" style="border-radius: 20px; background: #3d2b1f; color: white;">
+                <h5 class="fw-bold mb-4"><i class="fas fa-file-invoice me-2"></i> Thông tin đơn hàng</h5>
+                <div class="mb-3">
+                    <small class="opacity-75 d-block">Mã đơn hàng</small>
+                    <span class="fw-bold fs-5">@Model.Id</span>
+                </div>
+                <div class="mb-3">
+                    <small class="opacity-75 d-block">Khách hàng</small>
+                    <span class="fw-bold">@Model.Customer</span>
+                </div>
+                <div class="mb-3">
+                    <small class="opacity-75 d-block">Số điện thoại</small>
+                    <span class="fw-bold">@Model.Phone</span>
+                </div>
+                <hr class="opacity-25">
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="fw-bold">TỔNG TIỀN:</span>
+                    <h3 class="fw-bold text-warning mb-0">@Model.Total.ToString("N0")đ</h3>
+                </div>
+            </div>
+        </div>
+
+        @* --- Cột phải: Danh sách món ăn --- *@
+        <div class="col-md-8">
+            <div class="card border-0 shadow-sm p-4" style="border-radius: 20px;">
+                <h5 class="fw-bold mb-4" style="color: #3d2b1f;"><i class="fas fa-coffee me-2"></i> Danh sách món pha chế</h5>
+                <table class="table table-hover align-middle">
+                    <thead class="text-muted small text-uppercase">
+                        <tr>
+                            <th>Tên món</th>
+                            <th class="text-center">Số lượng</th>
+                            <th class="text-end">Đơn giá</th>
+                            <th class="text-end">Thành tiền</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in ViewBag.Items) {
+                            <tr>
+                                <td class="fw-bold">@item.Product</td>
+                                <td class="text-center">x @item.Qty</td>
+                                <td class="text-end">@item.Price.ToString("N0")đ</td>
+                                <td class="text-end fw-bold">@((item.Qty * item.Price).ToString("N0"))đ</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

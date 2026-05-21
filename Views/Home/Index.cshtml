@@ -1,0 +1,883 @@
+@model IEnumerable<CoffeeHouseAdmin.Models.Product>
+
+@{
+    ViewData["Title"] = "Trang Chủ - Coffee House";
+}
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<style>
+    /* 1. Cài đặt chung & Font */
+    @@import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap');
+    body { font-family: 'Quicksand', sans-serif; background-color: #fcfaf8; }
+
+    /* 2. Thanh Tìm Kiếm & Phân Loại */
+    .search-filter-box {
+        background: white; border-radius: 20px; padding: 25px; margin-top: -60px;
+        position: relative; z-index: 100; box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+    }
+    .filter-tab { color: #877e66; font-weight: 600; text-decoration: none; padding-bottom: 8px; transition: 0.3s; font-size: 0.95rem; }
+    .filter-tab.active, .filter-tab:hover { color: #5c4033; border-bottom: 3px solid #5c4033; }
+
+    /* 3. Thẻ Sản Phẩm */
+    .product-card { border-radius: 20px; overflow: hidden; transition: 0.3s; border: none; background: white; }
+    .product-card:hover { transform: translateY(-8px); box-shadow: 0 12px 25px rgba(92, 64, 51, 0.1) !important; }
+    .product-img-container { height: 200px; overflow: hidden; cursor: pointer; }
+    .product-img-container img { transition: 0.5s; object-fit: cover; width: 100%; height: 100%; }
+    .product-card:hover img { transform: scale(1.1); }
+    .btn-coffee { background-color: #3d2b1f; color: white; border-radius: 12px; font-weight: 600; transition: 0.3s; border: none; }
+    .btn-coffee:hover { background-color: #5c4033; color: white; }
+
+    /* 4. Modal Tùy Chỉnh */
+    .modal-content { border-radius: 25px; border: none; }
+    .custom-check { display: none; }
+    .custom-label { 
+        padding: 6px 15px; border-radius: 50px; border: 1px solid #eee; 
+        cursor: pointer; transition: 0.2s; font-size: 0.85rem; background: #f8f9fa; color: #555;
+    }
+    .custom-check:checked + .custom-label { background: #3d2b1f; color: white; border-color: #3d2b1f; }
+    .section-title { font-size: 0.95rem; font-weight: 700; color: #3d2b1f; margin-bottom: 12px; display: block; }
+
+    /* 5. Chatbot Styles */
+    .product-name-chat { color: #5c4033; font-weight: 700; }
+    #chatMessages::-webkit-scrollbar { width: 5px; }
+    #chatMessages::-webkit-scrollbar-thumb { background: #ccc; border-radius: 10px; }
+
+   /* Container căn giữa */
+.justify-content-center {
+    justify-content: center !important;
+}
+
+/* Nút Xác nhận: Dài ra và Quyền lực */
+.btn-confirm-order-v3 {
+    background-color: #885a3b;
+    color: white;
+    border: none;
+    border-radius: 15px;
+    height: 54px; /* Cao hơn tí cho sang */
+    font-weight: 700;
+    font-size: 16px;
+    transition: 0.3s;
+    box-shadow: 0 4px 15px rgba(61, 43, 31, 0.2);
+    min-width: 180px; /* Đảm bảo luôn dài */
+}
+
+/* Bộ nút số lượng: Ngắn lại và Gọn gàng */
+.qty-pill-v3 {
+    background: #ffffff;
+    border-radius: 15px;
+    padding: 4px; /* Giảm padding để ngắn lại */
+    border: 2px solid #8d5d3d;
+    height: 54px;
+    width: fit-content;
+}
+
+.qty-btn-v3 {
+    width: 34px; /* Bóp nhỏ nút bấm lại */
+    height: 34px;
+    border-radius: 10px;
+    border: none;
+    background: #f8f5f2;
+    color: #7b5135;
+    font-weight: bold;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.qty-input-v3 {
+    width: 35px; /* Thu hẹp ô hiển thị số */
+    border: none;
+    background: transparent;
+    text-align: center;
+    font-weight: 800;
+    font-size: 16px;
+    color: #6a4932;
+}
+
+.btn-confirm-order-v3:hover {
+    background-color: #5a4030;
+    transform: translateY(-2px);
+}
+</style>
+
+<div class="position-relative d-flex align-items-center justify-content-center text-center text-white" 
+     style="height: 50vh; background: url('https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=1920&q=80') center/cover no-repeat; margin-top: -16px;">
+    <div class="position-absolute top-0 start-0 w-100 h-100 bg-dark" style="opacity: 0.5;"></div>
+    <div class="position-relative z-index-1">
+        <h1 class="display-4 fw-bold">Khám Phá Hương Vị Cà Phê Tuyệt Hảo</h1>
+        <p class="lead">Góc nhỏ riêng mình, cà phê chuẩn gu ☕</p>
+    </div>
+</div>
+
+<div class="container pb-5">
+    <div class="row justify-content-center">
+        <div class="col-md-11 col-lg-10 search-filter-box">
+            <form action="/" method="get">
+                <div class="row g-3 align-items-center">
+                    <div class="col-md-5">
+                        <div class="input-group bg-light rounded-pill px-3 py-1">
+                            <span class="input-group-text bg-transparent border-0"><i class="fas fa-search text-muted"></i></span>
+                            <input type="text" name="search" class="form-control bg-transparent border-0" placeholder="Bạn muốn uống gì hôm nay?" value="@Context.Request.Query["search"]">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <select name="priceRange" class="form-select border-0 bg-light rounded-pill">
+                            <option value="">Tất cả giá</option>
+                            <option value="under30" selected="@(Context.Request.Query["priceRange"] == "under30")">Dưới 30.000đ</option>
+                            <option value="30to50" selected="@(Context.Request.Query["priceRange"] == "30to50")">30.000đ - 50.000đ</option>
+                            <option value="above50" selected="@(Context.Request.Query["priceRange"] == "above50")">Trên 50.000đ</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4 d-flex gap-2">
+                        <button type="submit" class="btn flex-grow-1 rounded-pill text-white fw-bold py-2" style="background-color: #5c4033;">TÌM KIẾM</button>
+                        @if (Context.Request.Query.Count > 0) {
+                            <a href="/" class="btn rounded-pill border-0 py-2 px-3 bg-secondary bg-opacity-10 text-secondary fw-bold">
+                                <i class="fas fa-undo-alt"></i>
+                            </a>
+                        }
+                    </div>
+                </div>
+                <input type="hidden" name="category" value="@Context.Request.Query["category"]" />
+            </form>
+            <div class="d-flex gap-4 mt-4 border-top pt-3">
+                <a href="/" class="filter-tab @(string.IsNullOrEmpty(Context.Request.Query["category"]) ? "active" : "")">Tất cả</a>
+                <a href="/?category=Cà phê" class="filter-tab @(Context.Request.Query["category"] == "Cà phê" ? "active" : "")">Cà phê</a>
+                <a href="/?category=Trà" class="filter-tab @(Context.Request.Query["category"] == "Trà" ? "active" : "")">Trà</a>
+                <a href="/?category= Món kèm" class="filter-tab @(Context.Request.Query["category"] == "Món kèm" ? "active" : "")">Món kèm</a>          
+                  </div>
+        </div>
+    </div>
+
+    <div class="mt-5 mb-4 d-flex justify-content-between align-items-center">
+        <h4 class="fw-bold mb-0" style="color: #3d2b1f;">Menu Đặc Sản</h4>
+        <small class="text-muted">Hiển thị: @Model.Count() món</small>
+    </div>
+
+    <div class="row g-4">
+@{
+    // --- 0. LẤY CUỐN TỪ ĐIỂN ĐIỂM SAO TỪ CONTROLLER SANG ---
+    var statsDict = ViewBag.ReviewStats as Dictionary<int, (double Avg, int Count)>;
+}
+
+@foreach (var item in Model) {
+    // --- 1. XỬ LÝ DỮ LIỆU SẠCH (TRÁNH LỖI JS CỦA BOSS GIỮ NGUYÊN 100%) ---
+    var jsName = item.Name?.Replace("'", "\\'");
+    
+    var jsDesc = (item.Description ?? item.FlavorProfile ?? "Hương vị đậm đà")
+                 .Replace("'", "\\'")
+                 .Replace("\r", "").Replace("\n", " ");
+                 
+    var jsImg = item.ImageUrl ?? "https://placehold.co/400x400?text=Coffee";
+    var jsStar = item.BitternessLevel ?? "5.0";
+    var jsPrice = (int)item.Price; 
+
+    <div class="col-md-4 col-lg-3 product-item-container" data-category="@item.Category">
+        <div class="card h-100 shadow-sm product-card">
+            
+            <div class="product-img-container" 
+                 onclick="openProductDetail('@jsName', @jsPrice, '@jsImg', '@jsDesc', '@jsStar', '@item.Category')" style="cursor: pointer;">
+                <img src="@jsImg" onerror="this.src='https://placehold.co/400x400?text=Coffee'">
+            </div>
+
+            <div class="card-body text-center d-flex flex-column">
+                <h6 class="fw-bold mb-1">@item.Name</h6>
+
+                @* --- 2. KHỐI HIỂN THỊ SAO ĐÁNH GIÁ ĐỒNG BỘ (ĐÃ THÊM ONCLICK ĐỂ ẤN VÀO XEM CHI TIẾT) --- *@
+                <div class="product-rating-badge mb-2" onclick="openReviewsModal('@item.Id', '@jsName')" style="cursor: pointer;" title="Bấm để xem tất cả đánh giá">
+                    @if (statsDict != null && statsDict.ContainsKey(item.Id))
+                    {
+                        var stats = statsDict[item.Id];
+                        <div class="d-flex align-items-center justify-content-center gap-1">
+                            <span class="text-warning">
+                                @for (int i = 1; i <= 5; i++)
+                                {
+                                    if (i <= Math.Round(stats.Avg))
+                                    {
+                                        <i class="fas fa-star" style="font-size: 0.75rem;"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="far fa-star" style="font-size: 0.75rem;"></i>
+                                    }
+                                }
+                            </span>
+                            <span class="text-muted fw-bold" style="font-size: 0.75rem; margin-top: 1px;">
+                                @stats.Avg.ToString("F1") <span class="text-secondary fw-normal"> Guild(@stats.Count)</span>
+                            </span>
+                        </div>
+                    }
+                    else
+                    {
+                        <small class="text-muted opacity-50" style="font-size: 0.75rem;">
+                            <i class="far fa-comment-dots"></i> Chưa có đánh giá
+                        </small>
+                    }
+                </div>
+
+                <small class="text-muted d-block mb-2" style="font-size: 0.75rem;">@item.FlavorProfile</small>
+                <p class="text-danger fw-bold fs-5 mt-auto mb-3">@item.Price.ToString("N0")đ</p>
+
+                <button class="btn btn-coffee w-100 py-2" 
+                        onclick="openProductDetail('@jsName', @jsPrice, '@jsImg', '@jsDesc', '@jsStar', '@item.Category')">
+                    Chọn mua
+                </button>
+            </div>
+
+        </div>
+    </div>
+}
+</div>
+</div>
+
+<div class="modal fade" id="productModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow-lg">
+            <div class="modal-header border-0 pb-0">
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4 pt-0 text-center">
+                <img id="modalImg" src="" class="img-fluid rounded-4 mb-3 shadow-sm" style="height: 220px; width: 100%; object-fit: cover;">
+                <div class="d-flex justify-content-center align-items-center gap-2 mb-1">
+                    <h4 id="modalName" class="fw-bold m-0" style="color: #3d2b1f;"></h4>
+                    <span id="modalStar" class="badge rounded-pill bg-warning text-dark small"></span>
+                </div>
+                <p id="modalFlavor" class="text-muted small mb-3"></p>
+                <h5 id="modalDisplayPrice" class="text-danger fw-bold fs-4 mb-4"></h5>
+
+               <div class="text-start border-top pt-3">
+    <div id="iceOptionSection" class="mb-3">
+        <span class="section-title"><i class="fas fa-snowflake me-2"></i>Mức đá</span>
+        <div class="d-flex gap-2">
+            <input type="radio" name="ice" class="custom-check" id="ice100" checked><label class="custom-label" for="ice100">100% đá</label>
+            <input type="radio" name="ice" class="custom-check" id="ice50"><label class="custom-label" for="ice50">50% đá</label>
+            <input type="radio" name="ice" class="custom-check" id="ice0"><label class="custom-label" for="ice0">Không đá</label>
+        </div>
+    </div>
+
+    <div id="sugarOptionSection" class="mb-3">
+        <span class="section-title"><i class="fas fa-cubes me-2"></i>Mức đường</span>
+        <div class="d-flex gap-2">
+            <input type="radio" name="sugar" class="custom-check" id="sug100" checked><label class="custom-label" for="sug100">100% đường</label>
+            <input type="radio" name="sugar" class="custom-check" id="sug50"><label class="custom-label" for="sug50">50% đường</label>
+            <input type="radio" name="sugar" class="custom-check" id="sug0"><label class="custom-label" for="sug0">Không đường</label>
+        </div>
+    </div>
+
+    <div id="toppingOptionSection" class="mb-4">
+    <span class="section-title"><i class="fas fa-plus-circle me-2"></i>Topping (+5.000đ)</span>
+    <div class="d-flex flex-wrap gap-2">
+        <input type="checkbox" class="custom-check topping-item" id="tp1" data-price="5000" onchange="calculateTotalPrice()">
+        <label class="custom-label" for="tp1">Trân châu trắng</label>
+
+        <input type="checkbox" class="custom-check topping-item" id="tp2" data-price="5000" onchange="calculateTotalPrice()">
+        <label class="custom-label" for="tp2">Kem Cheese</label>
+
+        <input type="checkbox" class="custom-check topping-item" id="tp3" data-price="5000" onchange="calculateTotalPrice()">
+        <label class="custom-label" for="tp3">Thạch cà phê</label>
+
+        <input type="checkbox" class="custom-check topping-item" id="tp4" data-price="5000" onchange="calculateTotalPrice()">
+        <label class="custom-label" for="tp4">Hạt sen</label>
+    </div>
+</div>
+</div>
+            </div>
+   <div class="d-flex justify-content-center align-items-center gap-2 mt-4 mb-2 w-100 px-3">
+    
+    @* --- 1. NÚT THÊM (CHIẾM 70% CHIỀU RỘNG) --- *@
+    <button type="button" class="btn-confirm-order-v3 flex-grow-1" onclick="confirmAddToCart()">
+        Thêm <span id="modalTotalBtn" class="ms-1">0đ</span>
+    </button>
+
+    @* --- 2. BỘ SỐ LƯỢNG (NGẮN LẠI - CHIẾM 30% CHIỀU RỘNG) --- *@
+    <div class="qty-pill-v3 d-flex align-items-center">
+        <button class="qty-btn-v3" type="button" onclick="changeQty(-1)">-</button>
+        <input type="text" id="modalQty" class="qty-input-v3" value="1" readonly>
+        <button class="qty-btn-v3" type="button" onclick="changeQty(1)">+</button>
+    </div>
+
+</div>
+
+</div>
+
+<input type="hidden" id="modalBasePrice" value="0">
+        </div>
+    </div>
+</div>
+
+<button id="chatbotToggleBtn" class="btn position-fixed shadow-lg p-0" style="bottom: 30px; right: 30px; width: 60px; height: 60px; border-radius: 50%; z-index: 9999; border: 3px solid #fff;">
+    <img src="https://i.pinimg.com/originals/88/5c/b9/885cb9c22fe028b25db7ea87b1e301cd.gif" style="width: 100%; height: 100%; border-radius: 50%;">
+</button>
+
+<div id="chatWidget" class="card shadow-lg position-fixed d-none" style="bottom: 100px; right: 30px; width: 340px; border-radius: 20px; z-index: 9999; border: none; overflow: hidden;">
+    <div class="card-header text-white d-flex justify-content-between p-3" style="background: #3d2b1f;">
+        <span class="fw-bold small">Bé Phin AI 🤖</span>
+        <div class="d-flex gap-2">
+            <i class="fas fa-trash-alt" id="clearChatBtn" style="cursor:pointer; font-size: 0.8rem;" title="Xóa lịch sử chat"></i>
+            <button type="button" class="btn-close btn-close-white" id="closeChatBtn" style="font-size: 0.7rem;"></button>
+        </div>
+    </div>
+    <div class="card-body bg-light" id="chatMessages" style="height: 320px; overflow-y: auto; font-size: 0.9rem;"></div>
+    <div class="card-footer bg-white border-0 p-2">
+        <div class="input-group">
+            <input type="text" id="chatInput" class="form-control rounded-pill bg-light border-0 ps-3 small" placeholder="Hỏi Bé Phin ngay...">
+            <button class="btn ms-1 text-white rounded-circle" id="sendChatBtn" style="background: #3d2b1f;"><i class="fas fa-paper-plane" style="font-size: 0.8rem;"></i></button>
+        </div>
+    </div>
+</div>
+
+
+<div class="container pb-5">
+    <div class="row g-4">
+       
+
+@* --- 3. MODAL XEM CHI TIẾT ĐÁNH GIÁ CỦA SẢN PHẨM --- *@
+<div class="modal fade" id="modalViewProductReviews" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" style="max-width: 500px;">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 25px;">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="fw-bold text-dark mb-0"><i class="fas fa-comments text-warning me-2"></i> Đánh giá từ khách hàng</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <p class="text-muted small mb-3">Sản phẩm: <span id="reviewModalProdName" class="fw-bold text-success"></span></p>
+                <div id="productReviewsListContainer" style="max-height: 400px; overflow-y: auto;">
+                    <div class="text-center py-3">
+                        <div class="spinner-border text-secondary spinner-border-sm" role="status"></div>
+                        <span class="ms-2 small text-muted">Bé Phin đang bốc lịch sử review...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* --- 4. ĐOẠN JS XỬ LÝ LẤY DATA REVIEW KHI CLICK VÀO SAO --- *@
+<script>
+    function openReviewsModal(productId, productName) {
+        document.getElementById("reviewModalProdName").innerText = productName;
+        const container = document.getElementById("productReviewsListContainer");
+        container.innerHTML = `<div class="text-center py-3"><div class="spinner-border text-secondary spinner-border-sm"></div></div>`;
+        
+        var reviewModal = new bootstrap.Modal(document.getElementById('modalViewProductReviews'));
+        reviewModal.show();
+
+        fetch(`/Home/GetProductReviews?productId=${productId}`)
+            .then(res => res.json())
+            .then(data => {
+                if (!data || data.length === 0) {
+                    container.innerHTML = '<p class="text-center text-muted small py-3">Món này chưa có bình luận chi tiết nào Boss ơi! 🥰</p>';
+                    return;
+                }
+                
+                let html = '';
+                data.forEach(r => {
+                    let starHtml = '';
+                    for (let i = 1; i <= 5; i++) {
+                        if (i <= r.rating) {
+                            starHtml += '<i class="fas fa-star text-warning me-1" style="font-size:0.7rem;"></i>';
+                        } else {
+                            starHtml += '<i class="far fa-star text-warning me-1" style="font-size:0.7rem;"></i>';
+                        }
+                    }
+
+                    html += `
+                        <div class="p-3 bg-light rounded-4 mb-2 border-0 shadow-sm">
+                            <div class="d-flex align-items-center mb-1">
+                                <img src="https://ui-avatars.com/api/?name=${encodeRawUrl(r.customer)}&background=3d2b1f&color=fff&size=32" 
+                                     class="rounded-circle me-2" width="32" height="32">
+                                <div class="flex-grow-1">
+                                    <div class="fw-bold text-dark" style="font-size:0.8rem;">${r.customer}</div>
+                                    <div class="d-flex align-items-center">
+                                        ${starHtml}
+                                        <small class="text-muted ms-2" style="font-size:10px;">${r.date}</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <p class="text-secondary small mb-0 ps-4" style="line-height:1.4; font-size:0.8rem;">
+                                "${r.comment ? r.comment : 'Khách hàng không để lại bình luận văn bản, chỉ chấm số sao.'}"
+                            </p>
+                        </div>`;
+                });
+                container.innerHTML = html;
+            })
+            .catch(err => {
+                container.innerHTML = `<p class="text-center text-danger small py-3">Lỗi tải dữ liệu: ${err}</p>`;
+            });
+    }
+
+    function encodeRawUrl(str) {
+        return encodeURIComponent(str.replace(/&#xE2;/g, 'â'));
+    }
+</script>
+
+@* --- 4. ĐOẠN JS XỬ LÝ LẤY DATA REVIEW KHI CLICK VÀO SAO --- *@
+<script>
+    function openReviewsModal(productId, productName) {
+        document.getElementById("reviewModalProdName").innerText = productName;
+        const container = document.getElementById("productReviewsListContainer");
+        container.innerHTML = `<div class="text-center py-3"><div class="spinner-border text-secondary spinner-border-sm"></div></div>`;
+        
+        var reviewModal = new bootstrap.Modal(document.getElementById('modalViewProductReviews'));
+        reviewModal.show();
+
+        fetch(`/Home/GetProductReviews?productId=${productId}`)
+            .then(res => res.json())
+            .then(data => {
+                if (!data || data.length === 0) {
+                    container.innerHTML = '<p class="text-center text-muted small py-3">Món này chưa có bình luận chi tiết nào Boss ơi! 🥰</p>';
+                    return;
+                }
+                
+                let html = '';
+                data.forEach(r => {
+                    let starHtml = '';
+                    for (let i = 1; i <= 5; i++) {
+                        if (i <= r.rating) {
+                            starHtml += '<i class="fas fa-star text-warning me-1" style="font-size:0.7rem;"></i>';
+                        } else {
+                            starHtml += '<i class="far fa-star text-warning me-1" style="font-size:0.7rem;"></i>';
+                        }
+                    }
+
+                    html += `
+                        <div class="p-3 bg-light rounded-4 mb-2 border-0 shadow-sm">
+                            <div class="d-flex align-items-center mb-1">
+                                <img src="https://ui-avatars.com/api/?name=${encodeRawUrl(r.customer)}&background=3d2b1f&color=fff&size=32" 
+                                     class="rounded-circle me-2" width="32" height="32">
+                                <div class="flex-grow-1">
+                                    <div class="fw-bold text-dark" style="font-size:0.8rem;">${r.customer}</div>
+                                    <div class="d-flex align-items-center">
+                                        ${starHtml}
+                                        <small class="text-muted ms-2" style="font-size:10px;">${r.date}</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <p class="text-secondary small mb-0 ps-4" style="line-height:1.4; font-size:0.8rem;">
+                                "${r.comment ? r.comment : 'Khách hàng không để lại bình luận văn bản, chỉ chấm số sao.'}"
+                            </p>
+                        </div>`;
+                });
+                container.innerHTML = html;
+            })
+            .catch(err => {
+                container.innerHTML = `<p class="text-center text-danger small py-3">Lỗi tải dữ liệu: ${err}</p>`;
+            });
+    }
+
+    function encodeRawUrl(str) {
+        return encodeURIComponent(str.replace(/&#xE2;/g, 'â'));
+    }
+</script>
+
+@section Scripts {
+    @* --- BƯỚC 1: CHUẨN BỊ DỮ LIỆU C# (Viết riêng để không bị lỗi Method Group) --- *@
+    @{
+        var tenHienThi = Context.Session.GetString("UserName") ?? "Khach_Vang_Lai"; 
+        var safeKey = tenHienThi.Replace("@", "_").Replace(".", "_").Replace(" ", "_");
+        var menuJsonData = "[]";
+
+        if (Model != null && Model.Any())
+        {
+            var simplified = Model.Select(p => new {
+                p.Name,
+                p.Price,
+                p.Category,
+                Description = p.Description ?? p.FlavorProfile ?? "Thơm ngon"
+            }).ToList();
+            menuJsonData = Newtonsoft.Json.JsonConvert.SerializeObject(simplified);
+        }
+    }
+
+    <script>
+        // ========================================================
+        // --- 1. BIẾN TOÀN CỤC (CHÌA KHÓA TỔNG - DÙNG TOÀN TRANG) ---
+        // ========================================================
+        const currentUser = '@(Context.Session.GetString("UserName") ?? "Khach_Vang_Lai")';
+        const CART_KEY = 'coffee_cart_' + currentUser;
+        const STORAGE_KEY = 'phin_chat_history_@(safeKey)';
+        
+        let currentBasePrice = 0;
+        let menuString = "Danh sách menu thực tế của quán Coffee House:\n";
+
+        // ========================================================
+        // --- 2. LOGIC MODAL CHI TIẾT SẢN PHẨM ---
+        // ========================================================
+        
+        // Hàm mở Modal và xử lý ẩn/hiện tùy chọn theo loại món
+        function openProductDetail(name, price, img, desc, star, category) {
+            console.log(">>> Bé Phin đang mở món:", name, "| Loại:", category);
+            currentBasePrice = price;
+
+            const modalImg = document.getElementById('modalImg');
+            if (modalImg) { modalImg.src = img; }
+
+            document.getElementById('modalName').innerText = name;
+            document.getElementById('modalFlavor').innerText = desc;
+            document.getElementById('modalBasePrice').value = price;
+            // Reset số lượng về 1 mỗi khi mở món mới
+            document.getElementById('modalQty').value = 1;
+
+            const starElement = document.getElementById('modalStar');
+            if (starElement) {
+                starElement.innerHTML = `⭐ ${star}/5`;
+            }
+
+            document.getElementById('modalDisplayPrice').innerText = price.toLocaleString() + "đ";
+
+            // LOGIC "MẮT THẦN" - XỬ LÝ ẨN/HIỆN (BÁNH THÌ DẸP TOPPING)
+            const iceBox = document.getElementById('iceOptionSection');
+            const sugarBox = document.getElementById('sugarOptionSection');
+            const toppingBox = document.getElementById('toppingOptionSection');
+            const catName = category ? category.toLowerCase().trim() : "";
+
+            if (catName.includes("bánh") || catName.includes("kèm")) {
+                if (iceBox) iceBox.style.setProperty('display', 'none', 'important');
+                if (sugarBox) sugarBox.style.setProperty('display', 'none', 'important');
+                if (toppingBox) toppingBox.style.setProperty('display', 'none', 'important');
+            } else {
+                if (iceBox) iceBox.style.setProperty('display', 'block', 'important');
+                if (sugarBox) sugarBox.style.setProperty('display', 'block', 'important');
+                if (toppingBox) toppingBox.style.setProperty('display', 'block', 'important');
+            }
+
+            // RESET FORM VỀ TRẠNG THÁI BAN ĐẦU
+            document.querySelectorAll('.topping-item').forEach(el => el.checked = false);
+            if (document.getElementById('ice100')) document.getElementById('ice100').checked = true;
+            if (document.getElementById('sug100')) document.getElementById('sug100').checked = true;
+
+            calculateTotalPrice();
+
+            // MỞ MODAL (Dùng Bootstrap API)
+            const myModal = new bootstrap.Modal(document.getElementById('productModal'));
+            myModal.show();
+        }
+
+        // Hàm tăng giảm số lượng trên Modal
+        function changeQty(delta) {
+            let qtyInput = document.getElementById('modalQty');
+            let currentQty = parseInt(qtyInput.value) || 1;
+            let newQty = currentQty + delta;
+            if (newQty < 1) newQty = 1; 
+            qtyInput.value = newQty;
+            calculateTotalPrice(); // Tính lại tiền ngay
+        }
+
+        // Hàm tính tiền động khi khách chọn số lượng hoặc Topping
+        function calculateTotalPrice() {
+            const basePrice = parseInt(document.getElementById('modalBasePrice').value) || 0;
+            const qty = parseInt(document.getElementById('modalQty').value) || 1;
+            
+            let toppingTotal = 0;
+            document.querySelectorAll('.topping-item:checked').forEach(item => {
+                toppingTotal += parseInt(item.getAttribute('data-price')) || 0;
+            });
+
+            const finalTotal = (basePrice + toppingTotal) * qty;
+            
+            const totalBtn = document.getElementById('modalTotalBtn');
+            if (totalBtn) {
+                totalBtn.innerText = finalTotal.toLocaleString('vi-VN') + "đ";
+            }
+        }
+
+        // HÀM XÁC NHẬN THÊM VÀO GIỎ (ĐÃ FIX LỖI SỐ LƯỢNG VÀ BIẾN CART_KEY)
+        function confirmAddToCart() {
+            try {
+                const tableId = '@Context.Session.GetString("SittingTable")';
+
+                // --- ĐIỀU KIỆN CHẶN ĐĂNG NHẬP ---
+                if (currentUser === "Khach_Vang_Lai" && (tableId === '' || tableId === null)) {
+                    Swal.fire({
+                        title: 'Bạn ơi, từ từ đã! ✋',
+                        text: "Bạn đăng nhập để thêm vào giỏ hàng, hoặc quét mã QR tại bàn để gọi món nhé!",
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#3d2b1f',
+                        confirmButtonText: 'Đi đăng nhập ngay 🥰',
+                        cancelButtonText: 'Để sau'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            window.location.href = '/Account/Login'; 
+                        }
+                    });
+                    return; 
+                }
+
+                const name = document.getElementById('modalName').innerText;
+                const priceBtn = document.getElementById('modalTotalBtn');
+                const finalPrice = parseInt(priceBtn.innerText.replace(/\./g, '').replace('đ', '')) || 0;
+                
+                // LẤY ĐÚNG SỐ LƯỢNG THỰC TẾ (FIX LỖI CHỈ HIỆN 1)
+                const selectedQty = parseInt(document.getElementById('modalQty').value) || 1;
+
+                const ice = document.querySelector('input[name="ice"]:checked')?.nextElementSibling.innerText || "100% đá";
+                const sugar = document.querySelector('input[name="sugar"]:checked')?.nextElementSibling.innerText || "100% đường";
+
+                let toppings = [];
+                document.querySelectorAll('.topping-item:checked').forEach(tp => {
+                    toppings.push(tp.nextElementSibling.innerText);
+                });
+                const toppingList = toppings.join(", ");
+
+                const cartItem = {
+                    name: name,
+                    price: finalPrice / selectedQty, // Lưu đơn giá 1 ly để tính toán ở trang giỏ hàng
+                    image: document.getElementById('modalImg').getAttribute('src'),
+                    options: `${ice}, ${sugar}`,
+                    toppings: toppingList,
+                    quantity: selectedQty 
+                };
+
+                // DÙNG BIẾN TOÀN CỤC CART_KEY
+                let cart = JSON.parse(sessionStorage.getItem(CART_KEY)) || [];
+
+                const existingItem = cart.find(item => 
+                    item.name === cartItem.name && 
+                    item.options === cartItem.options && 
+                    item.toppings === cartItem.toppings
+                );
+
+                if (existingItem) {
+                    // Nếu đã có, cộng thêm số lượng khách mới chọn
+                    existingItem.quantity += selectedQty;
+                } else {
+                    cart.push(cartItem);
+                }
+
+                sessionStorage.setItem(CART_KEY, JSON.stringify(cart));
+
+                // Cập nhật chấm đỏ giỏ hàng
+                if (typeof updateCartBadge === 'function') updateCartBadge();
+
+                // Đóng Modal
+                const modalEl = document.getElementById('productModal');
+                const modalInstance = bootstrap.Modal.getInstance(modalEl);
+                if (modalInstance) modalInstance.hide();
+
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 2000,
+                    icon: 'success',
+                    title: `Đã thêm ${selectedQty} món vào giỏ! 🥰`
+                });
+            } catch (e) {
+                console.error("Lỗi thêm vào giỏ:", e);
+            }
+        }
+
+        // ========================================================
+        // --- 3. LOGIC CHATBOT BÉ PHIN AI (GIỮ NGUYÊN) ---
+        // ========================================================
+        document.addEventListener('DOMContentLoaded', function () {
+            const widget = document.getElementById('chatWidget');
+            const toggleBtn = document.getElementById('chatbotToggleBtn');
+            const chatMessages = document.getElementById('chatMessages');
+            const chatInput = document.getElementById('chatInput');
+            const sendBtn = document.getElementById('sendChatBtn');
+            const clearBtn = document.getElementById('clearChatBtn');
+            const storage = (currentUser === 'Khach_Vang_Lai') ? sessionStorage : localStorage;
+
+            // --- NẠP MENU VÀO menuString ---
+            try {
+                const rawData = @Html.Raw(menuJsonData);
+                if (Array.isArray(rawData)) {
+                    rawData.forEach(p => {
+                        menuString += "- " + p.Name + " (" + p.Category + "): " + p.Price.toLocaleString() + "đ. HD: " + p.Description + "\n";
+                    });
+                }
+            } catch (e) {
+                console.error("Bé Phin: Lỗi nạp menu!", e);
+            }
+            console.log("Bé Phin đã học thuộc menu mới nhất:", menuString);
+
+            const forceScroll = () => {
+                if (chatMessages) chatMessages.scrollTop = chatMessages.scrollHeight;
+            };
+
+            // Mở/Đóng chat
+            if (toggleBtn) {
+                toggleBtn.onclick = () => {
+                    widget.classList.toggle('d-none');
+                    if (!widget.classList.contains('d-none')) setTimeout(forceScroll, 50);
+                };
+            }
+
+            if (document.getElementById('closeChatBtn')) {
+                document.getElementById('closeChatBtn').onclick = () => widget.classList.add('d-none');
+            }
+
+            // Gửi tin nhắn
+            async function handleSend() {
+                const text = chatInput.value.trim();
+                if (!text) return;
+
+                // --- 1. VŨ KHÍ CHỐNG CHÀO RƯỜM RÀ ---
+                const userMessages = chatMessages.querySelectorAll('.text-end').length;
+                let currentInstruction = menuString;
+                if (userMessages > 0) {
+                    currentInstruction += "\nLƯU Ý: Trả lời ngắn gọn, KHÔNG chào lại 'Bé Phin xin chào'.";
+                }
+
+                chatMessages.insertAdjacentHTML('beforeend', `<div class="text-end mb-2"><span class="p-2 text-white rounded shadow-sm d-inline-block" style="background:#3d2b1f;">${text}</span></div>`);
+                chatInput.value = '';
+                
+                const loadId = "load-" + Date.now();
+                chatMessages.insertAdjacentHTML('beforeend', `<div id="${loadId}" class="mb-2 small text-muted">Bé Phin đang gõ... 💭</div>`);
+                forceScroll();
+
+                try {
+                    const res = await fetch('/Chat/AskGemini', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ message: text, menu: currentInstruction })
+                    });
+                    const data = await res.json();
+                    if (document.getElementById(loadId)) document.getElementById(loadId).remove();
+
+                    let rawReply = data.reply;
+
+                    // --- 2. BỘ LỌC GỌI MÓN ---
+                    const orderRegex = /\[ORDER:\s*(.*?)\s*\|\s*(.*?)\]/gi;
+                    const matches = [...rawReply.matchAll(orderRegex)];
+
+                    if (matches.length > 0) {
+                        matches.forEach(match => {
+                            const itemName = match[1].trim();
+                            const itemPrice = match[2].trim();
+                            if (typeof addFromAI === 'function') {
+                                addFromAI(itemName, itemPrice);
+                            }
+                        });
+                    }
+
+                    // --- 3. BỘ LỌC ĐIỀU HƯỚNG ---
+                    if (/\[CHECKOUT\]/i.test(rawReply)) {
+                        const tableId = '@Context.Session.GetString("SittingTable")';
+                        const urlGioHang = '@Url.Action("Index", "Cart")';
+                        const urlThanhToan = '@Url.Action("Checkout", "Cart")';
+
+                        Swal.fire({
+                            title: 'Bé Phin đang dẫn đường... 🐾',
+                            text: (tableId && tableId !== "") ? 'Mời Bạn xem lại giỏ hàng để gọi món tại bàn nhé!' : 'Dẫn Bạn đi thanh toán đơn hàng Online ngay đây!',
+                            icon: 'success',
+                            timer: 2000,
+                            showConfirmButton: false,
+                            willClose: () => {
+                                if (tableId && tableId !== "") {
+                                    window.location.href = `${urlGioHang}?tableId=${tableId}`;
+                                } else {
+                                    window.location.href = urlThanhToan;
+                                }
+                            }
+                        });
+                    }
+
+                    // --- 4. LÀM SẠCH VÀ HIỂN THỊ ---
+                    let cleanReply = rawReply.replace(/\[.*?\]/g, '')
+                                             .replace(/\n/g, '<br>')
+                                             .replace(/Bé Phin/g, '<b>Bé Phin</b>');
+
+                    chatMessages.insertAdjacentHTML('beforeend', `<div class="mb-2"><span class="p-2 bg-white border rounded shadow-sm d-inline-block">${cleanReply}</span></div>`);
+                    storage.setItem(STORAGE_KEY, chatMessages.innerHTML);
+                    forceScroll();
+
+                } catch (err) {
+                    if(document.getElementById(loadId)) document.getElementById(loadId).innerText = "Lỗi rồi Boss ơi... 🥺";
+                    console.error("Lỗi Chatbot:", err);
+                }
+            }
+
+            if (sendBtn) sendBtn.onclick = handleSend;
+            if (chatInput) chatInput.onkeypress = (e) => { if (e.key === 'Enter') handleSend(); };
+
+            // Logic AI gọi món (addFromAI)
+            window.addFromAI = function(name, priceStr) {
+                const price = parseInt(priceStr.replace(/\./g, '').replace('đ', '').trim()) || 0;
+                const rawData = @Html.Raw(menuJsonData) || []; 
+
+                const aiSearchName = name.toLowerCase().trim().normalize('NFC');
+                const productInfo = rawData.find(p => {
+                    const menuName = (p.Name || p.name || "").toLowerCase().trim().normalize('NFC');
+                    return menuName.includes(aiSearchName) || aiSearchName.includes(menuName);
+                });
+
+                let anhMoneAn = "/img/default-coffee.png";
+                if (productInfo) {
+                    let path = productInfo.Image || productInfo.image || productInfo.HinhAnh;
+                    if (path) {
+                        anhMoneAn = (path.startsWith('/') || path.startsWith('http')) ? path : "/img/" + path;
+                    }
+                }
+
+                let cart = JSON.parse(sessionStorage.getItem(CART_KEY)) || [];
+                const cartItem = {
+                    name: productInfo ? productInfo.Name : name,
+                    price: price,
+                    image: anhMoneAn,
+                    options: "AI đặt hộ",
+                    quantity: 1
+                };
+
+                const existingIndex = cart.findIndex(i => i.name === cartItem.name);
+                if (existingIndex > -1) {
+                    cart[existingIndex].quantity += 1;
+                } else {
+                    cart.push(cartItem);
+                }
+
+                sessionStorage.setItem(CART_KEY, JSON.stringify(cart));
+                if (typeof updateCartBadge === 'function') updateCartBadge();
+            };
+
+            // Xóa lịch sử chat
+            if (clearBtn) {
+                clearBtn.onclick = () => {
+                    Swal.fire({
+                        title: 'Xóa sạch kỷ niệm sao Bạn? 🥺',
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#3d2b1f',
+                        confirmButtonText: 'Xóa đi!',
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            storage.removeItem(STORAGE_KEY);
+                            chatMessages.innerHTML = `<div class="mb-2"><span class="p-2 bg-white rounded shadow-sm d-inline-block border">Ú oà! <b style="color:#3d2b1f">Bé Phin</b> xuất hiện rồi đây! Đừng ngần ngại hỏi em nha? ☕️🥰☕</span></div>`;
+                        }
+                    });
+                };
+            }
+
+            // Load lịch sử chat
+            const history = storage.getItem(STORAGE_KEY);
+            if (history && history.trim() !== "") {
+                chatMessages.innerHTML = history;
+                setTimeout(forceScroll, 100);
+            } else {
+                chatMessages.innerHTML = `
+                    <div class="mb-2">
+                        <span class="p-2 bg-white rounded shadow-sm d-inline-block border" style="max-width: 85%;">
+                            Ú oà! <b style="color:#3d2b1f">Bé Phin</b> đây! 
+                            Hôm nay Boss muốn thử món gì mới của quán mình không ạ? 🥰☕
+                        </span>
+                    </div>`;
+            }
+
+            // Thông báo quét mã bàn
+            const urlParams = new URLSearchParams(window.location.search);
+            const tableIdUrl = urlParams.get('tableId');
+            if (tableIdUrl) {
+                Swal.fire({
+                    title: 'Xin chào Bạn yêu! 👋',
+                    html: `Bé Phin đã sẵn sàng phục vụ tại <b>Bàn ${tableIdUrl}</b>.<br>Mời Bạn yêu thong thả chọn món nhé!`,
+                    icon: 'success',
+                    confirmButtonColor: '#3d2b1f',
+                    confirmButtonText: 'Bắt đầu gọi món 🥰'
+                });
+            }
+        });
+    </script>
+}

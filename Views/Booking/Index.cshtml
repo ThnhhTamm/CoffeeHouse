@@ -1,0 +1,188 @@
+@model IEnumerable<CoffeeHouseAdmin.Models.CoffeeTable>
+
+@{
+    ViewData["Title"] = "Đặt Chỗ - Coffee House";
+}
+
+<style>
+    /* 1. Style cho sơ đồ bàn */
+    .booking-container { background: #fff; border-radius: 30px; padding: 40px; box-shadow: 0 10px 40px rgba(0,0,0,0.05); }
+    .table-map { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 20px; }
+    
+    .table-item {
+        border: 2px solid #eee; border-radius: 20px; padding: 25px;
+        text-align: center; transition: 0.3s; cursor: pointer; position: relative;
+        background: #fdfdfd;
+    }
+
+    /* Bàn Trống */
+    .table-item.available { border-color: #3d2b1f; color: #3d2b1f; }
+    .table-item.available:hover { background: #3d2b1f; color: #fff; transform: translateY(-5px); }
+
+    /* Bàn Đã Đặt / Đang Phục Vụ */
+    .table-item.occupied { background: #f1f1f1; border-color: #ddd; color: #aaa; cursor: not-allowed; }
+    .table-item.occupied i { color: #ccc; }
+    
+    .status-badge {
+        position: absolute; top: 10px; right: 10px; font-size: 0.65rem;
+        padding: 3px 8px; border-radius: 50px; font-weight: 700;
+    }
+    .bg-trong { background: #e8f5e9; color: #2e7d32; }
+    .bg-datcho { background: #ffebee; color: #c62828; }
+
+    /* 2. Modal Style */
+    .modal-content { border-radius: 25px; border: none; }
+    .booking-input { background: #f8f9fa; border: 1px solid #eee; border-radius: 12px; padding: 12px; }
+</style>
+
+<div class="container py-5">
+    <div class="text-center mb-5">
+        <h2 class="fw-bold" style="color: #3d2b1f;">ĐẶT CHỖ TRƯỚC ☕</h2>
+        <div class="mb-3">
+    <a asp-controller="Home" asp-action="Index" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
+        <i class="fas fa-arrow-left me-1"></i> Quay lại trang chủ
+    </a>
+</div>
+        <p class="text-muted">Chọn vị trí yêu thích của Boss để Bé Phin giữ chỗ nhé!</p>
+    </div>
+
+    <div class="booking-container">
+        <div class="table-map">
+            @foreach (var table in Model)
+            {
+                var isAvailable = table.Status == "Trống";
+               <div class="table-item @(isAvailable ? "available" : "occupied")" 
+     onclick='@(isAvailable ? $"openBookingModal(\"{table.TableID}\", \"{table.TableName}\")" : "")'>
+                    
+                    <span class="status-badge @(isAvailable ? "bg-trong" : "bg-datcho")">
+                        @(isAvailable ? "Trống" : "Hết bàn")
+                    </span>
+
+                    <i class="fas fa-couch fa-2x mb-3"></i>
+                    <h6 class="fw-bold mb-1">@table.TableName</h6>
+                    <small class="d-block">Sức chứa: @table.Capacity người</small>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="bookingFormModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow-lg">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="fw-bold" style="color: #3d2b1f;">Phiếu Đặt Chỗ - <span id="targetTableName"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+       <form id="confirmBookingForm">
+    @Html.AntiForgeryToken()
+    <div class="modal-body p-4">
+        @* Quan trọng: Lưu ID bàn dưới dạng chuỗi (như SV01) *@
+        <input type="hidden" id="targetTableID" name="TableID">
+        
+        <div class="mb-3">
+            <label class="small fw-bold mb-1">Số điện thoại</label>
+            <input type="text" id="bookingPhone" class="form-control booking-input" placeholder="09xx xxx xxx" required>
+        </div>
+
+        <div class="row">
+            <div class="col-6 mb-3">
+                <label class="small fw-bold mb-1">Ngày đến</label>
+                <input type="date" id="bookingDate" class="form-control booking-input" required>
+            </div>
+            <div class="col-6 mb-3">
+                <label class="small fw-bold mb-1">Giờ đến (Khách tự chọn)</label>
+                @* Đổi sang input type="time" để chọn giờ linh hoạt *@
+                <input type="time" id="bookingTime" class="form-control booking-input" required>
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label class="small fw-bold mb-1">Số người</label>
+            <input type="number" id="bookingSize" class="form-control booking-input" value="2" min="1" max="10">
+        </div>
+    </div>
+    <div class="modal-footer border-0 p-4 pt-0">
+        <button type="button" onclick="submitBooking()" class="btn btn-coffee w-100 py-3 fw-bold">XÁC NHẬN ĐẶT BÀN</button>
+    </div>
+</form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // 1. Hàm mở Modal (HTML của Boss đang gọi hàm này)
+        function openBookingModal(id, name) {
+            console.log(">>> Đang mở Modal cho bàn:", name);
+            
+            // Đổ dữ liệu vào các ô Input
+            const targetId = document.getElementById('targetTableID');
+            const targetName = document.getElementById('targetTableName');
+            const targetNameSpan = document.getElementById('targetTableNameSpan'); // Nếu Boss có dùng span
+
+            if (targetId) targetId.value = id;
+            if (targetName) targetName.value = name;
+            if (targetNameSpan) targetNameSpan.innerText = name;
+
+            // Set ngày mặc định là hôm nay
+            const dateInput = document.getElementById('bookingDate');
+            if (dateInput) dateInput.valueAsDate = new Date();
+
+            // Hiện Modal
+            const modalEl = document.getElementById('bookingFormModal');
+            if (modalEl) {
+                const myModal = new bootstrap.Modal(modalEl);
+                myModal.show();
+            } else {
+                console.error(">>> Bé Phin không tìm thấy Modal có ID 'bookingFormModal'!");
+            }
+        }
+
+        // 2. Hàm gửi dữ liệu (Chốt đơn)
+       function submitBooking() {
+    const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+
+    // Boss soi kỹ: Các tên ở đây (TableID, Phone...) phải GIỐNG HỆT bên Controller nhé
+    const bookingData = {
+        TableID: document.getElementById('targetTableID').value, // Lấy chuỗi "SV01"
+        Phone: document.getElementById('bookingPhone').value,
+        Date: document.getElementById('bookingDate').value,
+        Time: document.getElementById('bookingTime').value,
+        PartySize: parseInt(document.getElementById('bookingSize').value)
+    };
+
+    if (!bookingData.Phone || !bookingData.Date || !bookingData.Time) {
+        Swal.fire('Boss ơi!', 'Vui lòng điền đủ SĐT, Ngày và Giờ nhé! 🥰', 'warning');
+        return;
+    }
+
+    fetch('/Booking/ConfirmBooking', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'RequestVerificationToken': token
+        },
+        body: JSON.stringify(bookingData)
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Đặt chỗ thành công! 🎉',
+                text: 'Hẹn gặp Boss Tâm tại quán nhé!',
+                confirmButtonColor: '#3d2b1f'
+            }).then(() => location.reload());
+        } else {
+            // Nếu Controller báo lỗi (ví dụ req == null), nó sẽ hiện ở đây
+            Swal.fire('Lỗi rồi!', data.message || 'Dữ liệu không hợp lệ.', 'error');
+        }
+    })
+    .catch(err => {
+        console.error("Lỗi:", err);
+        Swal.fire('Lỗi hệ thống!', 'Boss kiểm tra lại Controller nhé!', 'error');
+    });
+}
+    </script>
+} @* <--- QUAN TRỌNG: Dấu ngoặc kết thúc @section Scripts *@

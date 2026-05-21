@@ -1,0 +1,249 @@
+@model IEnumerable<CoffeeHouseAdmin.Models.Product>
+
+<div class="container-fluid py-4 px-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold d-flex align-items-center" style="color: #3d2b1f;">
+                <i class="fas fa-box-open me-3 text-secondary"></i> Quản lý sản phẩm
+            </h2>
+            <p class="text-muted mb-0">Có tổng cộng <strong class="text-dark">@ViewBag.Total</strong> món trong thực đơn.</p>
+        </div>
+        <button class="btn text-white px-4 py-2 shadow-sm" style="background: #3d2b1f; border-radius: 12px; font-weight: 500;" data-bs-toggle="modal" data-bs-target="#addProductModal">
+            <i class="fas fa-plus me-2"></i> Thêm sản phẩm
+        </button>
+    </div>
+
+    <div class="card border-0 shadow-sm mb-4" style="border-radius: 20px;">
+        <div class="card-body p-3">
+            <form asp-action="Index" method="get" class="row g-3">
+                <div class="col-md-10 position-relative d-flex align-items-center">
+                    <i class="fas fa-search position-absolute text-muted" style="left: 25px; top: 18px;"></i>
+                    <input name="search" type="text" class="form-control border-0 bg-light py-3 ps-5" 
+                           style="border-radius: 15px;" placeholder="Tìm kiếm sản phẩm theo tên..."
+                           value="@ViewBag.SearchTerm">
+                    @if (!string.IsNullOrEmpty(ViewBag.SearchTerm))
+                    {
+                        <a href="/Admin/Products" class="position-absolute text-muted text-decoration-none" style="right: 25px; top: 16px; font-size: 1.2rem;">
+                            <i class="fas fa-times-circle"></i>
+                        </a>
+                    }
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn w-100 py-3 fw-bold text-white shadow-sm" style="background: #877e66; border-radius: 12px;">TÌM KIẾM</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm overflow-hidden" style="border-radius: 20px;">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 text-center">
+                <thead style="background-color: #f8f9fa; color: #3d2b1f;">
+                    <tr class="text-uppercase small fw-bold">
+                        <th class="ps-4 py-3 text-start">Hình ảnh</th>
+                        <th class="text-start">Tên sản phẩm</th>
+                        <th>Danh mục</th>
+                        <th>Giá</th>
+                        <th>Tồn kho</th>
+                        <th>Độ rang</th>
+                        <th>Độ đắng</th>
+                        <th>Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white">
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td class="ps-4 text-start">
+                                <img src="@item.ImageUrl" alt="@item.Name" class="rounded shadow-sm" style="width: 50px; height: 50px; object-fit: cover; border: 1px solid #dee2e6;">
+                            </td>
+                            <td class="text-start fw-bold" style="color: #212529;">@item.Name</td>
+                            <td>
+                                @{
+                                    var catColor = item.Category == "Cà phê" ? "bg-warning-subtle text-warning border-warning" : "bg-danger-subtle text-danger border-danger";
+                                }
+                                <span class="badge rounded-pill border px-3 py-1 @catColor">@item.Category</span>
+                            </td>
+                            <td class="fw-bold" style="color: #3d2b1f;">@item.Price.ToString("N0")đ</td>
+                            <td class="fw-bold text-success">@item.Stock</td>
+                            <td class="text-muted">@item.RoastLevel</td>
+                            <td class="text-muted">@item.BitternessLevel</td>
+                            
+                            <td>
+                                <button class="btn btn-sm text-primary me-2 edit-btn" title="Sửa" 
+                                        data-bs-toggle="modal" data-bs-target="#editProductModal"
+                                        data-id="@item.Id" data-name="@item.Name" data-category="@item.Category" 
+                                        data-price="@item.Price" data-stock="@item.Stock" data-roast="@item.RoastLevel" 
+                                        data-bitter="@item.BitternessLevel" data-image="@item.ImageUrl">
+                                    <i class="fas fa-pen"></i>
+                                </button>
+                                <button class="btn btn-sm text-danger delete-btn" title="Xóa"
+                                        data-bs-toggle="modal" data-bs-target="#deleteProductModal"
+                                        data-id="@item.Id" data-name="@item.Name">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                    @if(!Model.Any()){
+                        <tr><td colspan="8" class="text-muted py-4">Chưa có sản phẩm nào.</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="addProductModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content shadow" style="border-radius: 20px; border: none;">
+            <div class="modal-header bg-light" style="border-radius: 20px 20px 0 0; border-bottom: none;">
+                <h5 class="modal-title fw-bold" style="color: #3d2b1f;"><i class="fas fa-plus-circle me-2"></i>Thêm Món Mới</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form asp-action="Create" method="post">
+                <div class="modal-body p-4">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Tên sản phẩm <span class="text-danger">*</span></label>
+                            <input type="text" name="Name" class="form-control rounded-3" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Danh mục <span class="text-danger">*</span></label>
+                            <select name="Category" class="form-select rounded-3" required>
+                                <option value="Cà phê">Cà phê</option>
+                                <option value="Trà">Trà</option>
+                                <option value=" Món Kèm">Món Kèm</option>
+                               
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Giá bán (VNĐ) <span class="text-danger">*</span></label>
+                            <input type="number" name="Price" class="form-control rounded-3" required min="0">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Tồn kho</label>
+                            <input type="number" name="Stock" class="form-control rounded-3" value="100" min="0">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Độ rang</label>
+                            <input type="text" name="RoastLevel" class="form-control rounded-3" placeholder="VD: Vừa, Đậm, Nhẹ">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Độ đắng</label>
+                            <input type="text" name="BitternessLevel" class="form-control rounded-3" placeholder="VD: 1, 2, 3">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-bold">Link Hình ảnh (URL)</label>
+                            <input type="text" name="ImageUrl" class="form-control rounded-3" placeholder="Để trống sẽ dùng ảnh mặc định">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top-0 justify-content-end pb-4 pe-4">
+                    <button type="button" class="btn btn-light px-4 py-2 fw-bold rounded-3" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn text-white px-5 py-2 fw-bold rounded-3" style="background: #3d2b1f;">Thêm ngay</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="editProductModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content shadow" style="border-radius: 20px; border: none;">
+            <div class="modal-header bg-light" style="border-radius: 20px 20px 0 0; border-bottom: none;">
+                <h5 class="modal-title fw-bold text-primary"><i class="fas fa-pen me-2"></i>Sửa Thông Tin</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form asp-action="Edit" method="post">
+                <input type="hidden" name="Id" id="editId">
+                <div class="modal-body p-4">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Tên sản phẩm</label>
+                            <input type="text" name="Name" id="editName" class="form-control rounded-3" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Danh mục</label>
+                            <select name="Category" id="editCategory" class="form-select rounded-3" required>
+                                <option value="Cà phê">Cà phê</option>
+                                <option value="Trà">Trà</option>
+                                <option value=" Món Kèm"> Món Kèm</option>
+                              
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Giá bán (VNĐ)</label>
+                            <input type="number" name="Price" id="editPrice" class="form-control rounded-3" required min="0">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Tồn kho</label>
+                            <input type="number" name="Stock" id="editStock" class="form-control rounded-3" min="0">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Độ rang</label>
+                            <input type="text" name="RoastLevel" id="editRoast" class="form-control rounded-3">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Độ đắng</label>
+                            <input type="text" name="BitternessLevel" id="editBitter" class="form-control rounded-3">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-bold">Link Hình ảnh (URL)</label>
+                            <input type="text" name="ImageUrl" id="editImage" class="form-control rounded-3">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top-0 justify-content-end pb-4 pe-4">
+                    <button type="button" class="btn btn-light px-4 py-2 fw-bold rounded-3" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary px-5 py-2 fw-bold rounded-3">Lưu thay đổi</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="deleteProductModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content shadow" style="border-radius: 20px; border: none;">
+            <div class="modal-body text-center p-4">
+                <i class="fas fa-exclamation-triangle fa-3x text-danger mb-3"></i>
+                <h5 class="fw-bold">Xác nhận xóa?</h5>
+                <p class="text-muted mb-4">Bạn có chắc chắn muốn xóa <strong id="deleteName" class="text-dark"></strong> khỏi Menu không?</p>
+                <form asp-action="Delete" method="post">
+                    <input type="hidden" name="id" id="deleteId">
+                    <div class="d-flex justify-content-center gap-2">
+                        <button type="button" class="btn btn-light fw-bold px-4 rounded-3" data-bs-dismiss="modal">Hủy</button>
+                        <button type="submit" class="btn btn-danger fw-bold px-4 rounded-3">Xóa luôn</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Mớm dữ liệu vào Form SỬA
+        document.querySelectorAll('.edit-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.getElementById('editId').value = this.dataset.id;
+                document.getElementById('editName').value = this.dataset.name;
+                document.getElementById('editCategory').value = this.dataset.category;
+                document.getElementById('editPrice').value = this.dataset.price;
+                document.getElementById('editStock').value = this.dataset.stock;
+                document.getElementById('editRoast').value = this.dataset.roast;
+                document.getElementById('editBitter').value = this.dataset.bitter;
+                document.getElementById('editImage').value = this.dataset.image;
+            });
+        });
+
+        // Mớm dữ liệu vào Form XÓA
+        document.querySelectorAll('.delete-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.getElementById('deleteId').value = this.dataset.id;
+                document.getElementById('deleteName').textContent = this.dataset.name;
+            });
+        });
+    </script>
+}

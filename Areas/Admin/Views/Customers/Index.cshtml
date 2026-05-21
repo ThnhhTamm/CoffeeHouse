@@ -1,0 +1,231 @@
+@model IEnumerable<CoffeeHouseAdmin.Models.Customer>
+
+<div class="container-fluid py-4 px-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold d-flex align-items-center" style="color: #3d2b1f;">
+                <i class="fas fa-users me-3 text-secondary"></i> Quản lý Khách hàng
+            </h2>
+            <p class="text-muted mb-0">Quản lý thông tin và hạng thẻ thành viên.</p>
+        </div>
+        <button type="button" class="btn text-white px-4 py-2 shadow-sm" style="background: #3d2b1f; border-radius: 12px; font-weight: 500;" data-bs-toggle="modal" data-bs-target="#addCustomerModal">
+            <i class="fas fa-user-plus me-2"></i> Thêm khách hàng
+        </button>
+    </div>
+
+    <div class="card border-0 shadow-sm mb-4" style="border-radius: 20px;">
+        <div class="card-body p-3">
+            <form asp-action="Index" method="get" class="row g-3">
+                <div class="col-md-9 position-relative d-flex align-items-center">
+                    <i class="fas fa-search position-absolute text-muted" style="left: 25px; top: 18px;"></i>
+                    <input name="search" type="text" class="form-control border-0 bg-light py-3 ps-5" 
+                           style="border-radius: 15px;" placeholder="Tìm khách hàng theo tên, số điện thoại..."
+                           value="@ViewBag.SearchTerm">
+                    
+                    @if (!string.IsNullOrEmpty(ViewBag.SearchTerm))
+                    {
+                        <a href="/Admin/Customers" class="position-absolute text-muted text-decoration-none" style="right: 25px; top: 15px; font-size: 1.2rem;">
+                            <i class="fas fa-times-circle"></i>
+                        </a>
+                    }
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn w-100 py-3 fw-bold text-white shadow-sm" 
+                            style="background: #877e66; border-radius: 12px;">TÌM KIẾM</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm overflow-hidden" style="border-radius: 20px;">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead style="background-color: #3d2b1f; color: white;">
+                    <tr class="text-uppercase small">
+                        <th class="ps-4 py-3">Mã KH</th>
+                        <th>Khách hàng</th>
+                        <th>Liên hệ</th>
+                        <th class="text-center">Số đơn</th>
+                        <th>Tổng chi tiêu</th>
+                        <th>Hạng thẻ</th>
+                        <th class="text-center">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white">
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td class="ps-4 text-muted fw-bold">@item.CustomerID</td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="bg-light rounded-circle d-flex justify-content-center align-items-center me-3" style="width: 45px; height: 45px;">
+                                        <i class="fas fa-user text-secondary"></i>
+                                    </div>
+                                    <span class="fw-bold" style="color: #212529;">@item.FullName</span>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="small">
+                                    <i class="fas fa-phone-alt text-muted me-2"></i>@item.Phone <br/>
+                                    @if(!string.IsNullOrEmpty(item.Email)) {
+                                        <i class="fas fa-envelope text-muted me-2"></i>@item.Email
+                                    }
+                                </div>
+                            </td>
+                            <td class="text-center fw-bold">@item.TotalOrders</td>
+                            <td class="text-danger fw-bold">@item.TotalSpent.ToString("N0")đ</td>
+                            <td>
+                                @{
+                                    var badgeClass = item.Rank switch {
+                                        "VIP Vàng" => "bg-warning-subtle text-warning border-warning",
+                                        "VIP Bạc" => "bg-secondary-subtle text-secondary border-secondary",
+                                        "Thành viên" => "bg-info-subtle text-info border-info",
+                                        _ => "bg-light text-muted border-light"
+                                    };
+                                }
+                                <span class="badge rounded-pill border px-3 py-2 @badgeClass">@item.Rank</span>
+                            </td>
+                            
+                            <td class="text-center">
+                                <button type="button" class="btn btn-sm btn-primary rounded-circle me-1 shadow-sm" 
+                    data-bs-toggle="modal" 
+                    data-bs-target="#customerModal"
+                    data-id="@item.CustomerID"
+                    data-name="@item.FullName"
+                    data-phone="@item.Phone"
+                    data-email="@item.Email"
+                    data-orders="@item.TotalOrders"
+                    data-spent="@item.TotalSpent"
+                    data-rank="@item.Rank">
+                <i class="fas fa-eye"></i>
+            </button>
+                                
+                                <a href="/Admin/Customers/Details/@item.CustomerID" class="btn btn-sm btn-info text-white rounded-circle me-1 shadow-sm" title="Hồ sơ chi tiết" style="width: 32px; height: 32px;">
+                                    <i class="fas fa-id-card"></i>
+                                </a>
+
+                                <button class="btn btn-sm btn-outline-danger border-0 rounded-circle" style="width: 32px; height: 32px;" title="Khóa/Xóa">
+                                    <i class="fas fa-ban"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="customerModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow" style="border-radius: 20px; border: none;">
+            <div class="modal-header bg-light" style="border-radius: 20px 20px 0 0; border-bottom: none;">
+                <h5 class="modal-title fw-bold" style="color: #3d2b1f;"><i class="fas fa-id-card me-2"></i>Xem nhanh khách hàng</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 text-center">
+                <div class="bg-light rounded-circle d-flex justify-content-center align-items-center mx-auto mb-3 shadow-sm" style="width: 80px; height: 80px;">
+                    <i class="fas fa-user fa-3x text-secondary"></i>
+                </div>
+                
+                <h4 class="fw-bold mb-0" id="modalName">Tên Khách Hàng</h4>
+                <span class="badge bg-warning text-dark mb-4 mt-2 px-3 py-2" id="modalRank" style="font-size: 0.9rem;">Hạng thẻ</span>
+
+                <div class="card bg-light border-0" style="border-radius: 15px;">
+                    <div class="card-body text-start p-4">
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <small class="text-muted d-block mb-1">Mã KH</small>
+                                <span class="fw-bold" id="modalId">-</span>
+                            </div>
+                            <div class="col-6">
+                                <small class="text-muted d-block mb-1">Số điện thoại</small>
+                                <span class="fw-bold" id="modalPhone">-</span>
+                            </div>
+                            <div class="col-12">
+                                <small class="text-muted d-block mb-1">Email</small>
+                                <span class="fw-bold" id="modalEmail">-</span>
+                            </div>
+                            <hr class="my-3 opacity-25">
+                            <div class="col-6">
+                                <small class="text-muted d-block mb-1">Tổng số đơn</small>
+                                <span class="fw-bold text-primary fs-5" id="modalOrders">0</span>
+                            </div>
+                            <div class="col-6">
+                                <small class="text-muted d-block mb-1">Tổng chi tiêu</small>
+                                <span class="fw-bold text-danger fs-5" id="modalSpent">0đ</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-top-0 justify-content-center pb-4">
+                <button type="button" class="btn btn-dark px-5 py-2 fw-bold" style="border-radius: 12px;" data-bs-dismiss="modal">ĐÓNG</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="addCustomerModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow" style="border-radius: 20px; border: none;">
+            <div class="modal-header bg-light" style="border-radius: 20px 20px 0 0; border-bottom: none;">
+                <h5 class="modal-title fw-bold" style="color: #3d2b1f;"><i class="fas fa-user-plus me-2"></i>Thêm Khách Hàng Mới</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            
+            <form asp-action="Create" method="post">
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Tên khách hàng <span class="text-danger">*</span></label>
+                        <input type="text" name="FullName" class="form-control" style="border-radius: 10px;" required placeholder="Nhập họ và tên">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Số điện thoại <span class="text-danger">*</span></label>
+                        <input type="text" name="Phone" class="form-control" style="border-radius: 10px;" required placeholder="Nhập số điện thoại">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Email</label>
+                        <input type="email" name="Email" class="form-control" style="border-radius: 10px;" placeholder="Nhập địa chỉ email (tùy chọn)">
+                    </div>
+                </div>
+                <div class="modal-footer border-top-0 justify-content-center pb-4">
+                    <button type="button" class="btn btn-light px-4 py-2 fw-bold" style="border-radius: 12px;" data-bs-dismiss="modal">HỦY BỎ</button>
+                    <button type="submit" class="btn btn-dark px-5 py-2 fw-bold" style="border-radius: 12px;">XÁC NHẬN THÊM</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        var customerModal = document.getElementById('customerModal')
+        customerModal.addEventListener('show.bs.modal', function (event) {
+            var button = event.relatedTarget;
+            
+            var id = button.getAttribute('data-id');
+            var name = button.getAttribute('data-name');
+            var phone = button.getAttribute('data-phone');
+            var email = button.getAttribute('data-email');
+            var orders = button.getAttribute('data-orders');
+            var spent = button.getAttribute('data-spent');
+            var rank = button.getAttribute('data-rank');
+
+            customerModal.querySelector('#modalId').textContent = id;
+            customerModal.querySelector('#modalName').textContent = name;
+            customerModal.querySelector('#modalPhone').textContent = phone;
+            customerModal.querySelector('#modalEmail').textContent = email ? email : 'Chưa cập nhật';
+            customerModal.querySelector('#modalOrders').textContent = orders + " đơn";
+            
+            var formattedSpent = Number(spent).toLocaleString('vi-VN');
+            customerModal.querySelector('#modalSpent').textContent = formattedSpent + 'đ';
+            
+            var rankBadge = customerModal.querySelector('#modalRank');
+            rankBadge.textContent = rank;
+            if(rank.includes('Vàng')) rankBadge.className = 'badge bg-warning text-dark mb-4 mt-2 px-3 py-2';
+            else if(rank.includes('Bạc')) rankBadge.className = 'badge bg-secondary mb-4 mt-2 px-3 py-2';
+            else rankBadge.className = 'badge bg-info text-dark mb-4 mt-2 px-3 py-2';
+        })
+    </script>
+}

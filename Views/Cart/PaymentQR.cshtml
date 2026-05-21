@@ -1,0 +1,110 @@
+@{
+    ViewData["Title"] = "Thanh toán đơn hàng";
+    var type = ViewBag.Type;
+    var amount = ViewBag.Amount != null ? (decimal)ViewBag.Amount : 0;
+    var orderId = ViewBag.OrderId;
+    
+    // 1. Cấu hình màu sắc
+    var themeColor = type == "Momo" ? "#ae2070" : (type == "ZaloPay" ? "#0068ff" : "#3d2b1f");
+    
+    // 2. LOGIC TẠO LINK ẢNH QR (QUAN TRỌNG NÈ BOSS)
+    string finalQrUrl = "";
+    long amountInt = (long)amount;
+
+    if (type == "Momo") 
+    {
+        // Vì link MoMo là trang web, mình phải lồng nó vào API tạo QR để biến nó thành ẢNH
+        string momoWebLink = $"https://nhantien.momo.vn/0976485496/{amountInt}";
+        finalQrUrl = $"https://api.qrserver.com/v1/create-qr-code/?size=300x300&data={Uri.EscapeDataString(momoWebLink)}";
+    }
+    else if (type == "ZaloPay")
+    {
+        // Tương tự cho ZaloPay
+        string zaloLink = "https://qr.zalopay.vn/xxx"; // Thay link ZaloPay thật của Boss
+        finalQrUrl = $"https://api.qrserver.com/v1/create-qr-code/?size=300x300&data={Uri.EscapeDataString(zaloLink)}";
+    }
+    else 
+    {
+        // Nếu là Bank thì dùng VietQR (Cái này là FILE ẢNH sẵn rồi nên chạy luôn)
+        finalQrUrl = $"https://img.vietqr.io/image/MB-0868124023-compact.jpg?amount={amountInt}&addInfo=THANH%20TOAN%20{orderId}&accountName=NGUYEN%20THI%20THANH%20TAM";
+    }
+
+    // Logo hiển thị cho đẹp
+    var logoUrl = type == "Momo" 
+        ? "https://upload.wikimedia.org/wikipedia/vi/f/fe/MoMo_Logo.png" 
+        : (type == "ZaloPay" ? "https://images.careerbuilder.vn/content/images/ZaloPay-logo.png" : "https://vietqr.net/portal-v2/images/img/Logo-VietQR.png");
+}
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-5">
+            <div class="card border-0 shadow-lg p-0" style="border-radius: 25px; overflow: hidden; background: #fff;">
+                <div class="p-4 text-center text-white" style="background-color: @themeColor;">
+                    <img src="@logoUrl" height="45" class="mb-2 rounded-3 shadow-sm bg-white p-1">
+                    <h5 class="fw-bold mb-0">Thanh toán @type</h5>
+                </div>
+
+                <div class="card-body p-4 text-center">
+                    <p class="text-muted mb-1 small uppercase fw-bold">Số tiền cần thanh toán</p>
+                    <h2 class="fw-bold text-danger mb-4">@amount.ToString("N0")đ</h2>
+
+                    <div class="qr-wrapper position-relative d-inline-block mb-4 p-3 bg-white shadow-sm" 
+                         style="border-radius: 20px; border: 2px solid #f0f0f0;">
+                        
+                        @* Thẻ img đã được Fix để không bị lỗi gạch đỏ *@
+                        <img src="@finalQrUrl" 
+                             alt="QR Payment" 
+                             class="img-fluid" 
+                             style="width: 250px; border-radius: 10px;"
+                             onerror="this.src='https://via.placeholder.com/250?text=Loi+Link+QR'">
+                        
+                        <div class="qr-scanner-line"></div>
+                    </div>
+
+                    <div class="text-start rounded-4 p-3 mb-4" style="background-color: #f8f9fa; border: 1px solid #eee;">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="small text-muted">Mã đơn hàng:</span>
+                            <span class="small fw-bold text-dark">#@orderId</span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span class="small text-muted">Trạng thái:</span>
+                            <span class="small badge rounded-pill bg-warning text-dark px-3">
+                                <span class="spinner-grow spinner-grow-sm me-1"></span> Chờ quét mã...
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button onclick="confirmPayment()" class="btn btn-dark py-3 fw-bold" 
+                                style="border-radius: 15px; background-color: #3d2b1f; border: none;">
+                            TÔI ĐÃ CHUYỂN KHOẢN XONG
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* ... Giữ nguyên phần CSS scan line của Boss ... */
+    body { background-color: #fcf8f5; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    .qr-wrapper { transition: all 0.3s ease; }
+    .qr-wrapper:hover { transform: scale(1.02); }
+    .qr-scanner-line {
+        position: absolute; left: 0; top: 0; width: 100%; height: 2px;
+        background: rgba(255, 0, 0, 0.5); box-shadow: 0 0 8px rgba(255, 0, 0, 0.8);
+        animation: scan 3s infinite linear;
+    }
+    @@keyframes scan { 0% { top: 5%; } 50% { top: 95%; } 100% { top: 5%; } }
+</style>
+
+<script>
+    function confirmPayment() {
+        Swal.fire({
+            title: 'Bé Phin đã nhận lệnh!',
+            text: 'Cảm ơn Boss đã ủng hộ Coffee House. Đơn hàng đang được chuẩn bị!',
+            icon: 'success'
+        }).then(() => { window.location.href = '/'; });
+    }
+</script>

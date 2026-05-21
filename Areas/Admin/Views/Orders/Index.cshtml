@@ -1,0 +1,198 @@
+@model IEnumerable<CoffeeHouseAdmin.Models.Order>
+
+@section Styles {
+    <style>
+        :root { --coffee-dark: #3d2b1f; --coffee-light: #fcf8f5; --gold-premium: #c49a6c; }
+        body { background-color: #f8f9fa; }
+        
+        /* Badge Subtle Custom */
+        .status-badge { font-weight: 600; padding: 0.5rem 1rem; border-radius: 12px; border: 1px solid transparent; font-size: 0.85rem; }
+        .bg-pending { background: #fff3cd; color: #856404; border-color: #ffeeba; }
+        .bg-confirmed { background: #cfe2ff; color: #084298; border-color: #b8daff; }
+        .bg-brewing { background: #cff4fc; color: #055160; border-color: #bee5eb; }
+        .bg-shipping { background: #e2e3e5; color: #41464b; border-color: #d6d8db; }
+        .bg-completed { background: #d1e7dd; color: #0f5132; border-color: #c3e6cb; }
+        .bg-canceled { background: #f8d7da; color: #842029; border-color: #f5c6cb; }
+
+        /* Card Statistics */
+        .stat-card { border-radius: 20px; transition: all 0.3s; border: none; min-height: 100px; display: flex; align-items: center; }
+        .stat-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.05); }
+        
+        /* Table Custom */
+        .table-container { border-radius: 20px; background: white; box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075); margin-top: 20px; }
+        .main-table thead { background: var(--coffee-dark); color: white; }
+        .main-table tr { transition: 0.2s; }
+        .main-table tbody tr:hover { background-color: var(--coffee-light); }
+        
+        .type-icon { width: 35px; height: 35px; display: flex; align-items: center; justify-content: center; border-radius: 10px; font-size: 1rem; }
+        .dropdown-menu { border-radius: 15px; border: none; box-shadow: 0 10px 30px rgba(0,0,0,0.1); padding: 10px; min-width: 180px; }
+        .dropdown-item { border-radius: 8px; padding: 8px 15px; margin-bottom: 2px; transition: 0.2s; font-size: 0.9rem; }
+        .dropdown-item:hover { background: var(--coffee-dark) !important; color: white !important; }
+        .dropdown-item.text-danger:hover { background: #dc3545 !important; }
+    </style>
+}
+
+<div class="container-fluid py-4 px-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold m-0 text-dark"><i class="fas fa-mug-hot me-2" style="color: var(--coffee-dark);"></i> Quản Lý Đơn hàng</h2>
+        <div class="badge bg-white text-dark shadow-sm px-3 py-2 rounded-pill">
+            <i class="far fa-clock me-1 text-primary"></i> @DateTime.Now.ToString("HH:mm:ss dd/MM")
+        </div>
+    </div>
+
+    @* --- Khu vực Thống kê (Quick Stats) --- *@
+    <div class="row g-3 mb-4 text-center">
+        @{
+            var stats = new[] {
+                new { Title = "Mới", Count = ViewBag.Pending, Class = "bg-warning-subtle", Icon = "fa-bell", Color = "text-warning" },
+                new { Title = "Đã nhận", Count = ViewBag.Confirmed, Class = "bg-primary-subtle", Icon = "fa-check-circle", Color = "text-primary" },
+                new { Title = "Pha chế", Count = ViewBag.Preparing, Class = "bg-info-subtle", Icon = "fa-coffee", Color = "text-info" },
+                new { Title = "Đã xong", Count = ViewBag.Delivered, Class = "bg-success-subtle", Icon = "fa-star", Color = "text-success" },
+                new { Title = "Đã hủy", Count = ViewBag.Cancelled, Class = "bg-danger-subtle", Icon = "fa-times-circle", Color = "text-danger" }
+            };
+        }
+        @foreach (var s in stats) {
+            <div class="col">
+                <div class="card stat-card p-3 @s.Class shadow-sm border-0">
+                    <div class="d-flex align-items-center justify-content-between w-100">
+                        <div class="text-start">
+                            <small class="text-uppercase fw-bold opacity-75">@s.Title</small>
+                            <h3 class="fw-bold @s.Color m-0">@s.Count</h3>
+                        </div>
+                        <div class="fs-2 opacity-25"><i class="fas @s.Icon"></i></div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    @* --- Bộ lọc & Tìm kiếm --- *@
+    <div class="card border-0 shadow-sm p-3 mb-4" style="border-radius: 20px;">
+        <form asp-action="Index" method="get" class="row g-3 align-items-center">
+            <div class="col-md-7">
+                <div class="input-group">
+                    <span class="input-group-text border-0 bg-light" style="border-radius: 12px 0 0 12px;"><i class="fas fa-search text-muted"></i></span>
+                    <input name="search" value="@ViewBag.SearchTerm" type="text" class="form-control border-0 bg-light py-2" style="border-radius: 0 12px 12px 0;" placeholder="Tìm theo mã đơn, khách hàng, số bàn hoặc SĐT...">
+                </div>
+            </div>
+            <div class="col-md-4">
+                <select name="status" class="form-select border-0 bg-light py-2" style="border-radius: 12px;">
+                    <option value="Tất cả trạng thái">Tất cả trạng thái</option>
+                    @foreach (var s in new[] { "Chờ xác nhận", "Đã xác nhận", "Đang chuẩn bị", "Đang giao", "Đã giao", "Đã hủy" }) {
+                        <option value="@s" selected="@(ViewBag.CurrentStatus == s ? "selected" : null)">@s</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-1">
+                <button type="submit" class="btn btn-dark w-100 py-2 shadow-sm" style="border-radius: 12px;"><i class="fas fa-filter"></i></button>
+            </div>
+        </form>
+    </div>
+
+    @* --- Bảng dữ liệu Main --- *@
+    <div class="table-container shadow-sm overflow-hidden">
+        <table class="table main-table table-hover align-middle mb-0">
+            <thead>
+                <tr class="small text-uppercase">
+                    <th class="ps-4 py-3">Loại</th>
+                    <th>Mã đơn</th>
+                    <th>Khách hàng</th>
+                    <th>Vị trí / Liên hệ</th>
+                    <th>Tổng tiền</th>
+                    <th style="width: 200px;">Trạng thái & Thao tác</th>
+                    <th class="pe-4">Thời gian</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model) {
+                    bool isAtTable = !string.IsNullOrEmpty(item.TableID);
+                    <tr>
+                        <td class="ps-4 text-center">
+                            @if (isAtTable) {
+                                <div class="type-icon bg-warning-subtle text-warning shadow-sm" title="Tại quán">
+                                    <i class="fas fa-chair"></i>
+                                </div>
+                            } else {
+                                <div class="type-icon bg-info-subtle text-info shadow-sm" title="Mang về/Ship">
+                                    <i class="fas fa-bicycle"></i>
+                                </div>
+                            }
+                        </td>
+                        <td class="small fw-bold text-muted">#@item.OrderID.Substring(Math.Max(0, item.OrderID.Length - 6))</td>
+                        <td>
+                            <div class="fw-bold">@item.CustomerName</div>
+                            <div class="small text-muted">
+                                <i class="fas @(item.PaymentMethod == "Tiền mặt" ? "fa-money-bill-wave text-success" : "fa-university text-primary") me-1"></i>
+                                @(item.PaymentMethod ?? "Tiền mặt")
+                            </div>
+                        </td>
+                        <td>
+                            @if (isAtTable) {
+                                <span class="badge bg-dark rounded-pill px-3 py-2 fw-normal">
+                                    <i class="fas fa-tag me-1 text-warning"></i> @(item.TableID == "Tại quán" ? "Khách tại quầy" : $"Bàn {item.TableID}")
+                                </span>
+                            } else {
+                                <div class="small fw-bold"><i class="fas fa-phone me-1 text-muted"></i> @item.Phone</div>
+                                <div class="text-muted small text-truncate" style="max-width: 150px;">@item.ShippingAddress</div>
+                            }
+                        </td>
+                        <td>
+                            <div class="fw-bold text-danger fs-6">@item.TotalAmount.ToString("N0")đ</div>
+                        </td>
+                        <td>
+                            @{
+                                var badgeClass = item.Status switch {
+                                    "Đã giao" => "bg-completed",
+                                    "Đang chuẩn bị" => "bg-brewing",
+                                    "Đã hủy" => "bg-canceled",
+                                    "Đã xác nhận" => "bg-confirmed",
+                                    "Đang giao" => "bg-shipping",
+                                    _ => "bg-pending"
+                                };
+
+                                string displayStatus = item.Status;
+                                if (isAtTable) {
+                                    if (item.Status == "Đang chuẩn bị") displayStatus = "Đang pha chế ☕";
+                                    if (item.Status == "Đã giao") displayStatus = "Đã phục vụ ✨";
+                                }
+                            }
+                            <div class="dropdown">
+                                <button class="btn btn-sm status-badge dropdown-toggle w-100 shadow-sm @badgeClass" type="button" data-bs-toggle="dropdown">
+                                    @displayStatus
+                                </button>
+                                <ul class="dropdown-menu">
+                                    @foreach (var stt in new[] { "Chờ xác nhận", "Đã xác nhận", "Đang chuẩn bị", "Đang giao", "Đã giao", "Đã hủy" }) {
+                                        if (isAtTable && stt == "Đang giao") continue;
+
+                                        string sttText = stt;
+                                        if (isAtTable) {
+                                            if (stt == "Đang chuẩn bị") sttText = "Đang pha chế";
+                                            if (stt == "Đã giao") sttText = "Đã phục vụ (Trả món)";
+                                        }
+
+                                        <li>
+                                            <form asp-action="UpdateStatus" method="post">
+                                                <input type="hidden" name="orderId" value="@item.OrderID" />
+                                                <input type="hidden" name="newStatus" value="@stt" />
+                                                <button type="submit" class="dropdown-item @(item.Status == stt ? "fw-bold text-primary bg-light" : "") @(stt == "Đã hủy" ? "text-danger" : "")">
+                                                    @if(stt == "Đã hủy") { <i class="fas fa-times-circle me-1"></i> }
+                                                    @sttText
+                                                </button>
+                                            </form>
+                                        </li>
+                                    }
+                                </ul>
+                            </div>
+                        </td>
+                        <td class="pe-4">
+                            <div class="small fw-bold">@item.OrderDate.ToString("HH:mm")</div>
+                            <div class="text-muted" style="font-size: 0.7rem;">@item.OrderDate.ToString("dd/MM/yyyy")</div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>

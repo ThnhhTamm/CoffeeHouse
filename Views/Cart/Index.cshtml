@@ -1,0 +1,610 @@
+@{
+    ViewData["Title"] = "Giỏ Hàng";
+}
+
+<style>
+    .cart-item-card {
+        border-radius: 20px;
+        border: none;
+        transition: 0.3s;
+        background: white;
+    }
+    .cart-item-card:hover {
+        box-shadow: 0 10px 20px rgba(0,0,0,0.05) !important;
+    }
+    .img-cart {
+        width: 100px;
+        height: 100px;
+        object-fit: cover;
+        border-radius: 15px;
+    }
+    .summary-box {
+        background: white;
+        border-radius: 25px;
+        position: sticky;
+        top: 100px;
+    }
+    .btn-checkout {
+        background-color: #3d2b1f;
+        color: white;
+        border-radius: 50px;
+        font-weight: 700;
+        padding: 15px;
+        transition: 0.3s;
+        border: none;
+    }
+    .btn-checkout:hover {
+        background-color: #5c4033;
+        color: white;
+        transform: translateY(-3px);
+    }
+    /* Style mới cho bộ nút tăng giảm */
+    .qty-control {
+        background: #f8f9fa;
+        border-radius: 50px;
+        border: 1px solid #eee;
+        padding: 5px 10px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .qty-btn {
+        border: none;
+        background: none;
+        color: #6c757d;
+        transition: 0.2s;
+        padding: 0 5px;
+    }
+    .qty-btn:hover {
+        color: #3d2b1f;
+        transform: scale(1.2);
+    }
+
+    
+    .custom-toast {
+        min-width: 300px;
+        color: white;
+        padding: 16px 20px;
+        border-radius: 8px;
+        margin-bottom: 12px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        display: flex;
+        align-items: center;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        font-weight: 500;
+        /* Hiệu ứng bay vào và bay ra */
+        animation: slideIn 0.4s ease forwards, fadeOut 0.4s ease 2.6s forwards;
+    }
+    /* Màu khi thành công (Xanh dịu mắt) */
+    .toast-success {
+        background-color: #2ecc71;
+        border-left: 6px solid #27ae60;
+    }
+    /* Màu khi thất bại/lỗi (Đỏ sang chảnh) */
+    .toast-error {
+        background-color: #e74c3c;
+        border-left: 6px solid #c0392b;
+    }
+    
+    @@keyframes slideIn {
+        from { transform: translateX(120%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+    @@keyframes fadeOut {
+        from { opacity: 1; transform: scale(1); }
+        to { opacity: 0; transform: scale(0.9); }
+    }
+
+/* Thêm vào thẻ style có sẵn của Boss */
+.voucher-card {
+    display: flex;
+    background: #fff;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    margin-bottom: 12px;
+    overflow: hidden;
+    position: relative;
+    transition: 0.3s;
+}
+.voucher-card:hover { border-color: #ee4d2d; }
+.voucher-left {
+    background: #3d2b1f; /* Màu nâu cafe chuẩn gu Boss */
+    color: #fff;
+    width: 80px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 10px;
+    border-right: 2px dashed #eee;
+}
+.voucher-right { flex: 1; padding: 12px; position: relative; padding-right: 40px; }
+.best-choice-tag {
+    position: absolute;
+    top: 0; right: 0;
+    background: #ee4d2d;
+    color: #fff;
+    font-size: 9px;
+    padding: 1px 6px;
+    border-bottom-left-radius: 8px;
+}
+.voucher-radio { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); }
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<div class="container py-5">
+    <div class="d-flex align-items-center mb-4">
+        <a href="/" class="btn btn-light rounded-circle me-3"><i class="fas fa-arrow-left"></i></a>
+        <h2 class="fw-bold m-0" style="color: #3d2b1f;">Giỏ hàng 🛒</h2>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div id="cartItemsList"></div>
+            
+            <div class="text-center mt-4 d-none" id="emptyCart">
+                <img src="https://cdn-icons-png.flaticon.com/512/11329/11329060.png" width="150" class="mb-3 opacity-50">
+                <h4 class="text-muted">Giỏ hàng đang trống trơn Bạn ơi...</h4>
+                <a href="/" class="btn btn-outline-dark rounded-pill mt-3 px-4">Quay lại menu gọi món ngay!</a>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card summary-box shadow-sm p-4 border-0">
+                <h5 class="fw-bold mb-4 border-bottom pb-3">Chi tiết đơn hàng</h5>
+                
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted">Tạm tính:</span>
+                    <span id="subtotal" class="fw-bold">0đ</span>
+                </div>
+                <div class="d-flex justify-content-between mb-4">
+                    <span class="text-muted">Phí vận chuyển:</span>
+                    <span class="text-success fw-bold">Miễn phí</span>
+                </div>
+                
+                <hr>
+          <div class="voucher-picker mb-3 p-3 border rounded bg-white d-flex justify-content-between align-items-center shadow-sm" 
+     onclick="openVoucherModal()" style="cursor:pointer; border-left: 5px solid #ee4d2d !important;">
+    <div class="d-flex align-items-center">
+        <i class="fas fa-ticket-alt text-danger me-2"></i>
+        <span id="selectedVoucherText" class="fw-bold" style="color: #ee4d2d;">Chọn Coffee Voucher</span>
+    </div>
+    <div class="text-muted small">Chọn hoặc nhập mã <i class="fas fa-chevron-right ms-1"></i></div>
+</div>
+
+<div id="discountRow" class="d-flex justify-content-between mb-2 text-danger" style="display: none !important;">
+    <span>Giảm giá:</span>
+    <span id="discountAmountDisplay">-0đ</span>
+</div>
+<input type="hidden" name="promoCode" id="hiddenPromoCode" value="">
+<input type="hidden" name="discountAmount" id="hiddenDiscountAmount" value="0">
+
+
+<input type="hidden" name="promoCode" id="hiddenPromoCode" value="">
+<input type="hidden" name="discountAmount" id="hiddenDiscountAmount" value="0">
+                
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <span class="fs-5 fw-bold">Tổng cộng:</span>
+                    <span id="totalBill" class="fs-3 fw-bold text-danger">0đ</span>
+                </div>
+
+                @if (ViewBag.TableId != null)
+                {
+                    <button class="btn btn-checkout w-100 shadow-sm mb-2" onclick="goToCheckout()">
+                        GỌI MÓN TẠI BÀN @ViewBag.TableId ☕
+                    </button>
+                    <p class="text-center small text-muted mb-3">
+                        <i class="fas fa-info-circle me-1"></i>Món sẽ được mang ra bàn và thanh toán sau nhé!
+                    </p>
+                }
+                else
+                {
+                    <button class="btn btn-checkout w-100 shadow-sm mb-3" onclick="goToCheckout()">
+                        TIẾN HÀNH THANH TOÁN
+                    </button>
+                }
+
+                <button class="btn btn-link btn-sm w-100 text-muted text-decoration-none" onclick="clearFullCart()">
+                    Xóa tất cả món
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="toast-container" style="position: fixed; top: 20px; right: 20px; z-index: 9999;"></div>
+<div class="modal fade" id="voucherModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="fw-bold">Chọn Coffee Voucher</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-3">
+                <div class="d-flex gap-2 mb-4 bg-light p-2 rounded">
+                    <input type="text" id="manualCode" class="form-control border-0 bg-transparent" placeholder="Nhập mã voucher...">
+                    <button class="btn btn-sm btn-dark px-3 rounded-pill" onclick="applyManualCode()">Áp dụng</button>
+                </div>
+                <div id="voucherListContainer" style="max-height: 400px; overflow-y: auto;">
+                    </div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-danger w-100 py-2 rounded-3 fw-bold" onclick="confirmVoucher()">Xác nhận</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    const currentUser = '@(Context.Session.GetString("UserName") ?? "Khach_Vang_Lai")';
+    const CART_KEY = 'coffee_cart_' + currentUser;
+
+    function renderCartPage() {
+        const listArea = document.getElementById('cartItemsList');
+        const emptyArea = document.getElementById('emptyCart');
+        const subtotalEl = document.getElementById('subtotal');
+        const totalEl = document.getElementById('totalBill');
+
+        const cart = JSON.parse(sessionStorage.getItem(CART_KEY)) || [];
+        let html = '';
+        let total = 0;
+
+        if (cart.length === 0) {
+            listArea.innerHTML = '';
+            emptyArea.classList.remove('d-none');
+            subtotalEl.innerText = '0đ';
+            totalEl.innerText = '0đ';
+            return;
+        }
+
+        emptyArea.classList.add('d-none');
+        
+        cart.forEach((item, index) => {
+            const itemQty = item.quantity || 1;
+            const itemTotal = item.price * itemQty;
+            total += itemTotal;
+
+            html += `
+                <div class="card cart-item-card shadow-sm mb-3 p-3">
+                    <div class="row align-items-center">
+                        <div class="col-md-2 col-4">
+                            <img src="${item.image || '/img/default-coffee.png'}" class="img-cart shadow-sm">
+                        </div>
+                        <div class="col-md-5 col-8">
+                            <h5 class="fw-bold mb-1" style="color: #3d2b1f;">${item.name}</h5>
+                            <div class="small text-muted mb-2">
+                                <span class="badge bg-light text-dark border me-1">${item.options || 'Mặc định'}</span>
+                                <p class="mb-0 mt-1"><i class="fas fa-plus-circle me-1"></i>Topping: ${item.toppings || 'Không'}</p>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4 col-10 d-flex align-items-center justify-content-md-end justify-content-between mt-2 mt-md-0">
+                            <span class="fs-5 fw-bold text-danger me-3">${itemTotal.toLocaleString()}đ</span>
+                            
+                            <div class="qty-control me-3">
+                                <button class="qty-btn" onclick="changeQuantity(${index}, -1)">
+                                    <i class="fas fa-minus small"></i>
+                                </button>
+                                <span class="fw-bold" style="min-width: 20px; text-align: center;">${itemQty}</span>
+                                <button class="qty-btn" onclick="changeQuantity(${index}, 1)">
+                                    <i class="fas fa-plus small"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="col-md-1 col-2 text-end">
+                            <button class="btn btn-sm btn-outline-secondary rounded-circle border-0" onclick="removeCartItem(${index})">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+
+       listArea.innerHTML = html;
+subtotalEl.innerText = total.toLocaleString() + 'đ';
+        totalEl.innerText = total.toLocaleString() + 'đ';
+        // Gọi hàm này để tính lại Tổng cộng sau khi trừ Voucher (nếu có)
+updateFinalTotal(total);
+    }
+
+    function changeQuantity(index, delta) {
+        let cart = JSON.parse(sessionStorage.getItem(CART_KEY)) || [];
+        if (cart[index]) {
+            cart[index].quantity = (cart[index].quantity || 1) + delta;
+            if (cart[index].quantity <= 0) {
+                cart.splice(index, 1);
+            }
+            sessionStorage.setItem(CART_KEY, JSON.stringify(cart));
+            renderCartPage();
+            if (typeof updateCartBadge === 'function') updateCartBadge();
+        }
+    }
+
+    function removeCartItem(index) {
+        let cart = JSON.parse(sessionStorage.getItem(CART_KEY)) || [];
+        cart.splice(index, 1);
+        sessionStorage.setItem(CART_KEY, JSON.stringify(cart));
+        renderCartPage();
+        if (typeof updateCartBadge === 'function') updateCartBadge();
+    }
+
+    function clearFullCart() {
+        Swal.fire({
+            title: 'Boss muốn xóa sạch giỏ hàng thật ạ? 🥺',
+            text: "Cà phê ngon đang đợi, đừng bỏ em mà!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#3d2b1f',
+            cancelButtonText: 'Hủy bỏ',
+            confirmButtonText: 'Đồng ý xóa 😢'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                sessionStorage.removeItem(CART_KEY); 
+                Swal.fire({
+                    title: 'Đã xóa sạch!',
+                    icon: 'success',
+                    timer: 1000,
+                    showConfirmButton: false
+                }).then(() => {
+                    location.reload(); 
+                });
+            }
+        })
+    }
+
+async function goToCheckout() {
+    const isGuest = '@(Context.Session.GetString("UserName") == null || Context.Session.GetString("UserName") == "Khach_Vang_Lai" ? "true" : "false")' === 'true';
+    const tableId = '@(Context.Session.GetString("SittingTable"))';
+
+    // 1. Kiểm tra quyền truy cập
+    if (isGuest && !tableId) {
+        Swal.fire({
+            title: 'Bạn ơi, dừng lại một chút! ✋☕',
+            text: "Bạn cần đăng nhập để đặt giao hàng, hoặc quét mã tại bàn để gọi món nhé ạ!",
+            icon: 'info',
+            showCancelButton: true,
+            confirmButtonColor: '#3d2b1f',
+            cancelButtonText: 'Để sau',
+            confirmButtonText: 'Đi đăng nhập ngay 🥰'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                window.location.href = '/Account/Login'; 
+            }
+        });
+        return;
+    }
+
+    // 2. Kiểm tra giỏ hàng
+    const cart = JSON.parse(sessionStorage.getItem(CART_KEY)) || [];
+    if (cart.length === 0) {
+        Swal.fire('Ơ kìa Boss!', 'Giỏ hàng trống thì gọi món sao được ạ? 😅', 'info');
+        return;
+    }
+
+    // 3. Đồng bộ giỏ hàng lên Server
+    const response = await fetch('/Cart/SyncCart', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(cart)
+    });
+
+    if (response.ok) {
+        // 🚀 Xóa giỏ hàng ở trình duyệt ngay lập tức
+        sessionStorage.removeItem(CART_KEY); 
+
+        // Lấy thông tin khuyến mãi
+        const promo = document.getElementById('hiddenPromoCode').value || "";
+        const discount = document.getElementById('hiddenDiscountAmount').value || 0;
+
+        Swal.fire({
+            title: 'Đang chuẩn bị... 🚀',
+            text: 'Đang chuyển đến trang thanh toán, Boss đợi Bé Phin một xíu nhé!',
+            icon: 'info',
+            confirmButtonColor: '#3d2b1f',
+            timer: 1500,
+            showConfirmButton: false
+        }).then(() => {
+            // ✅ CHỈ DÙNG 1 DÒNG NÀY ĐỂ MANG THEO MÃ GIẢM GIÁ
+            window.location.href = `/Cart/Checkout?promoCode=${promo}&discountAmount=${discount}`;
+        });
+    } else {
+        Swal.fire('Lỗi!', 'Bé Phin không kết nối được với máy chủ rồi.', 'error');
+    }
+}
+
+    document.addEventListener('DOMContentLoaded', renderCartPage);
+
+    // Hàm tạo thông báo đẹp mắt thay thế cho alert
+
+    // Hàm hiện thông báo "sang xịn mịn"
+    function showToast(message, type = 'success') {
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        toast.className = `custom-toast toast-${type}`;
+        toast.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'} me-2"></i> ${message}`;
+        container.appendChild(toast);
+        setTimeout(() => toast.remove(), 3000);
+    }
+
+    function applyVoucher() {
+        const code = document.getElementById('voucherInput').value;
+        // Lấy tổng tiền tạm tính, xóa chữ 'đ' và dấu '.' để tính toán
+        const subtotalText = document.getElementById('subtotal').innerText;
+        const subtotal = parseInt(subtotalText.replace(/[.đ]/g, '')) || 0;
+
+        if (!code) {
+            showToast("Boss chưa nhập mã mà! 🤦‍♀️", "error");
+            return;
+        }
+
+        // Gọi API kiểm tra mã (Hàm này Boss đã viết ở Controller rồi nhé)
+        fetch(`/Cart/CheckVoucher?code=${code}&orderTotal=${subtotal}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // 1. Hiện dòng giảm giá
+                    const discountRow = document.getElementById('discountRow');
+                    discountRow.setAttribute('style', 'display: flex !important;');
+                    document.getElementById('discountAmountDisplay').innerText = `-${data.discount.toLocaleString()}đ`;
+
+                    // 2. Tính toán lại Tổng cộng
+                    const finalTotal = subtotal - data.discount;
+                    document.getElementById('totalBill').innerText = `${finalTotal.toLocaleString()}đ`;
+
+                    // 3. Cất mã vào hidden input để gửi đi khi Thanh toán
+                    document.getElementById('hiddenPromoCode').value = code;
+                    document.getElementById('hiddenDiscountAmount').value = data.discount;
+
+                    showToast("Áp dụng mã thành công! Quá hời Bạnn ơi! 🥰", "success");
+                } else {
+                    showToast(data.message, "error");
+                }
+            })
+            .catch(error => {
+                console.error("Lỗi: ", error);
+                showToast("Hệ thống nấc cụt rồi, thử lại sau nha Boss!", "error");
+            });
+    }
+// 1. Biến toàn cục để lưu mã đang chọn nháp
+let tempVoucher = null;
+
+// 2. Hàm mở Modal và lấy danh sách Voucher từ Database
+function openVoucherModal() {
+    console.log("Bé Phin đang mở kho Voucher cho Boss... 🎁");
+    
+    // Lấy số tiền Tạm tính hiện tại (để biết mã nào đủ điều kiện)
+    const subtotalText = document.getElementById('subtotal').innerText;
+    const subtotal = parseInt(subtotalText.replace(/\D/g, '')) || 0;
+
+    // Khởi tạo Modal Bootstrap 5
+    const modalElement = document.getElementById('voucherModal');
+    const myModal = new bootstrap.Modal(modalElement);
+
+    // Gọi API bốc dữ liệu từ CartController
+    fetch('/Cart/GetAvailableVouchers')
+        .then(res => res.json())
+        .then(data => {
+            let html = '';
+            if (data.length === 0) {
+                html = '<div class="text-center p-4 text-muted">Hiện chưa có mã nào🥺</div>';
+            } else {
+                data.forEach(v => {
+                    const isLock = subtotal < v.minOrderAmount;
+                    
+                    // Vẽ từng thẻ Voucher kiểu Shopee
+                    html += `
+                    <div class="voucher-card mb-3 d-flex border rounded-3 overflow-hidden ${isLock ? 'opacity-50' : ''}" 
+                         style="height: 95px; border-left: 5px solid #3d2b1f !important; cursor: ${isLock ? 'not-allowed' : 'pointer'}"
+                         ${!isLock ? `onclick="selectVoucherCard(this, '${v.promoCode}', ${v.discountAmount}, ${v.discountPercent})"` : ''}>
+                        
+                        <div class="bg-dark text-white d-flex flex-column align-items-center justify-content-center" style="width: 85px; flex-shrink: 0;">
+                            <i class="fas fa-ticket-alt mb-1"></i>
+                            <b style="font-size: 10px;">${v.promoCode}</b>
+                        </div>
+
+                        <div class="p-2 flex-grow-1 position-relative bg-white text-start">
+                            ${!isLock ? '<div class="position-absolute badge bg-danger" style="top:0; right:0; font-size:9px; border-radius:0 0 0 8px;">Tốt nhất</div>' : ''}
+                            <h6 class="fw-bold mb-0 text-dark" style="font-size: 14px;">Giảm ${v.discountPercent > 0 ? v.discountPercent + '%' : v.discountAmount.toLocaleString() + 'đ'}</h6>
+                            <small class="text-muted d-block" style="font-size: 11px;">Đơn tối thiểu ${v.minOrderAmount.toLocaleString()}đ</small>
+                            <small class="text-muted" style="font-size: 10px;">HSD: ${new Date(v.expiryDate).toLocaleDateString()}</small>
+                            
+                            <div class="position-absolute" style="top: 35%; right: 15px;">
+                                <input type="radio" name="vch" class="form-check-input vch-radio" 
+                                       ${isLock ? 'disabled' : ''} style="pointer-events: none;">
+                            </div>
+                        </div>
+                    </div>`;
+                });
+            }
+            document.getElementById('voucherListContainer').innerHTML = html;
+            myModal.show();
+        })
+        .catch(err => {
+            console.error("Lỗi:", err);
+            showToast("Bé Phin không kết nối được Database để lấy Voucher!", "error");
+        });
+}
+
+// 3. Hàm xử lý khi Boss bấm vào 1 thẻ Voucher
+function selectVoucherCard(element, code, amount, percent) {
+    // 1. Ép cái nút Radio bên trong thẻ này phải được chọn
+    const radio = element.querySelector('.vch-radio');
+    if (radio) radio.checked = true;
+
+    // 2. Tạo hiệu ứng viền đỏ cho thẻ đang chọn để khách biết
+    document.querySelectorAll('.voucher-card').forEach(c => c.style.borderColor = '#eee');
+    element.style.borderColor = '#ee4d2d';
+
+    // 3. Tính toán số tiền được giảm
+    const subtotalText = document.getElementById('subtotal').innerText;
+    const subtotal = parseInt(subtotalText.replace(/\D/g, '')) || 0;
+    
+    let discount = percent > 0 ? (subtotal * percent / 100) : amount;
+    
+    // Lưu vào biến tạm
+    tempVoucher = { code, discount };
+    console.log("Đã chọn mã: " + code);
+}
+
+// 4. Hàm khi Boss bấm nút OK ở Modal
+function confirmVoucher() {
+    if (!tempVoucher) {
+        showToast("Boss chọn ít nhất 1 mã rồi mới OK chứ ạ! 😂", "error");
+        return;
+    }
+
+    // Cập nhật giao diện chính
+    document.getElementById('selectedVoucherText').innerText = "Đã chọn: " + tempVoucher.code;
+    document.getElementById('discountRow').setAttribute('style', 'display: flex !important;');
+    document.getElementById('discountAmountDisplay').innerText = `-${tempVoucher.discount.toLocaleString()}đ`;
+
+    // Tính lại Tổng cộng
+    const subtotalText = document.getElementById('subtotal').innerText;
+    const subtotal = parseInt(subtotalText.replace(/\D/g, '')) || 0;
+    document.getElementById('totalBill').innerText = (subtotal - tempVoucher.discount).toLocaleString() + "đ";
+
+    // Cất vào Hidden Input để gửi đơn hàng đi
+    document.getElementById('hiddenPromoCode').value = tempVoucher.code;
+    document.getElementById('hiddenDiscountAmount').value = tempVoucher.discount;
+
+    // Đóng Modal
+    const modalInstance = bootstrap.Modal.getInstance(document.getElementById('voucherModal'));
+    modalInstance.hide();
+    
+    showToast("Áp dụng mã thành công! Quá hời luôn Boss! 🥰", "success");
+}
+
+// 5. Hàm cho nút áp dụng mã thủ công (nếu Boss có dùng)
+function applyManualCode() {
+    const code = document.getElementById('manualCode').value;
+    if(!code) return showToast("Boss chưa nhập mã mà!", "error");
+    showToast("Đang kiểm tra mã: " + code, "success");
+    // Boss có thể nối hàm CheckVoucher cũ vào đây nếu muốn
+}
+function updateFinalTotal(subtotal) {
+    // 1. Lấy số tiền giảm giá từ cái Hidden Input mà Boss đã lưu khi chọn Voucher
+    const discountAmount = parseInt(document.getElementById('hiddenDiscountAmount').value) || 0;
+    const promoCode = document.getElementById('hiddenPromoCode').value;
+
+    // 2. Tính số tiền cuối cùng
+    let finalTotal = subtotal - discountAmount;
+    if (finalTotal < 0) finalTotal = 0;
+
+    // 3. Hiển thị ra màn hình cho khách sướng!
+    document.getElementById('totalBill').innerText = finalTotal.toLocaleString() + 'đ';
+
+    // 4. (Nâng cao) Nếu Boss muốn "khó tính" hơn: 
+    // Nếu giảm số lượng món làm Tạm tính < Đơn tối thiểu của Voucher thì hủy Voucher luôn
+    if (promoCode && subtotal < 20000) { // Ví dụ 20k là mức sàn
+        showToast("Đơn hàng không đủ điều kiện dùng mã này nữa rồi Boss ơi! 🥺", "error");
+        resetVoucher();
+    }
+}
+
+</script>
+
+}

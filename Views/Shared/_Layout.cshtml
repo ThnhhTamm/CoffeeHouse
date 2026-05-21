@@ -1,0 +1,498 @@
+﻿@using Microsoft.AspNetCore.Http
+@inject IHttpContextAccessor HttpContextAccessor
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>@ViewData["Title"] - Coffee House</title>
+    
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body { font-family: 'Quicksand', sans-serif; background-color: #fcfaf8; }
+        
+        /* 1. Header & Cart */
+        .navbar { background-color: #ffffff !important; border-bottom: 1px solid #eee; }
+        .btn-account {
+            border: 1px solid #333;
+            background: white;
+            border-radius: 50px;
+            padding: 8px 22px;
+            font-weight: 700;
+            color: #333;
+            transition: 0.3s;
+            text-decoration: none;
+        }
+        .btn-account:hover { background-color: #f8f9fa; }
+
+        .cart-icon-wrapper {
+            position: relative;
+            display: inline-block;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 50%;
+        }
+
+        .cart-badge {
+            position: absolute;
+            top: -2px;
+            right: -2px;
+            background-color: #802e1e; /* Màu đỏ Shopee cho nổi bật */
+            color: white;
+            font-size: 11px;
+            font-weight: bold;
+            padding: 2px 6px;
+            border-radius: 50%;
+            border: 2px solid white;
+            display: none; /* Mặc định ẩn, có món mới hiện */
+            min-width: 18px;
+            text-align: center;
+        }
+
+        /* 2. Modal Login/Register Styling */
+        .auth-modal .modal-content { border-radius: 30px; border: none; }
+        .auth-card { padding: 40px; }
+        .auth-title { color: #3d2b1f; font-weight: 800; font-size: 1.8rem; }
+        .auth-subtitle { color: #888; font-size: 0.9rem; margin-bottom: 30px; }
+        
+        .input-group-auth {
+            background: #f9f9f9;
+            border: 1px solid #eee;
+            border-radius: 15px;
+            padding: 10px 20px;
+            display: flex; align-items: center;
+            margin-bottom: 15px;
+            transition: 0.3s;
+        }
+        .input-group-auth:focus-within { border-color: #3d2b1f; background: white; }
+        .input-group-auth i { color: #aaa; margin-right: 15px; width: 20px; text-align: center; }
+        .input-group-auth input {
+            border: none; background: transparent; width: 100%;
+            outline: none; font-size: 0.95rem;
+        }
+
+        .btn-auth-submit {
+            background: #3d2b1f; color: white;
+            border: none; border-radius: 15px;
+            padding: 15px; font-weight: 700; width: 100%;
+            margin-top: 10px; transition: 0.3s;
+        }
+        .btn-auth-submit:hover { background: #5c4033; transform: translateY(-2px); }
+
+        .social-btn {
+            border: 1px solid #eee; border-radius: 15px;
+            padding: 10px; width: 48%;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 600; font-size: 0.9rem; transition: 0.3s;
+            text-decoration: none; color: #333;
+        }
+        .social-btn:hover { background: #f8f9fa; }
+        .social-btn img { width: 20px; margin-right: 10px; }
+
+        .auth-switch-text { font-size: 0.9rem; margin-top: 20px; color: #555; }
+        .auth-switch-link { color: #3d2b1f; font-weight: 700; text-decoration: none; cursor: pointer; }
+        
+        .form-check-label { font-size: 0.85rem; color: #666; }
+        .forgot-link { font-size: 0.85rem; color: #666; text-decoration: none; }
+
+        .coffee-footer {
+            background-color: #5c4033; /* Màu đen tuyền chuẩn Rubies */
+            color: #ffffff;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .footer-links li {
+            margin-bottom: 12px;
+        }
+
+        .footer-links a {
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: 0.3s;
+        }
+
+        .footer-links a:hover {
+            color: #ffffff;
+            padding-left: 5px;
+        }
+
+        .social-icons a {
+            width: 35px;
+            height: 35px;
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            text-decoration: none;
+            transition: 0.3s;
+            font-size: 0.9rem;
+        }
+
+        .social-icons a:hover {
+            background-color: #fff;
+            color: #683333;
+            transform: translateY(-3px);
+        }
+
+        /* Tiêu đề cột */
+        h6 {
+            letter-spacing: 1px;
+            font-size: 1rem;
+        }
+    </style>
+</head>
+<body>
+
+    <header class="sticky-top shadow-sm">
+        <nav class="navbar navbar-expand-lg">
+            <div class="container">
+                <a class="navbar-brand fw-bold" asp-controller="Home" asp-action="Index">
+                    <i class="fas fa-mug-hot me-2 text-warning"></i> Coffee House
+                </a>
+             
+                <div class="d-flex align-items-center gap-3 ms-auto">
+                    @{
+                        var userName = HttpContextAccessor.HttpContext.Session.GetString("UserName");
+                    }
+                    
+                    @if (!string.IsNullOrEmpty(userName))
+                    {
+                        <div class="dropdown">
+                            <button class="btn-account dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                <i class="fas fa-user-circle me-2"></i> Hi, @userName
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow border-0 mt-2">
+                                <li>
+                                    <a class="dropdown-item py-2" asp-controller="Account" asp-action="Profile">
+                                        <i class="fas fa-user-circle me-2 text-muted"></i> Thông tin cá nhân
+                                    </a>
+                                </li>
+                                  
+                                @* NẾU LÀ ADMIN THÌ MỚI CHO HIỆN NÚT QUẢN TRỊ *@
+                                @if (Context.Session.GetString("UserRole") == "Admin")
+                                {
+                                    <li>
+                                        <a class="dropdown-item py-2 text-primary fw-bold" href="/Admin/Home">
+                                            <i class="fas fa-user-shield me-2"></i> Trang Quản trị
+                                        </a>
+                                    </li>
+                                }
+
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <a class="dropdown-item py-2 text-danger" asp-controller="Account" asp-action="Logout">
+                                        <i class="fas fa-sign-out-alt me-2"></i> Đăng xuất
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    }
+
+                    @* --- 1. KIỂM TRA XEM CÓ ĐANG NGỒI TẠI BÀN KHÔNG (ĐÃ DỌN DÒNG USING THỪA Ở ĐÂY) --- *@
+                    @if (Context.Session.GetString("SittingTable") != null)
+                    {
+                        @* Nếu có bàn: Hiện số bàn cho oai, ẩn nút Tài khoản *@
+                        <div class="me-2">
+                            <span class="badge bg-warning text-dark p-2 rounded-pill shadow-sm">
+                                <i class="fas fa-map-marker-alt me-1"></i> Bàn @Context.Session.GetString("SittingTable")
+                            </span>
+                        </div>
+                    }
+                    else
+                    {
+                        @* --- 2. NẾU KHÔNG CÓ BÀN: MỚI HIỆN LOGIC TÀI KHOẢN CŨ CỦA BOSS --- *@
+                        if (Context.Session.GetString("UserName") != null) 
+                        {
+                            // ... Giữ nguyên đoạn Dropdown Đăng xuất của Boss ...
+                        }
+                        else
+                        {
+                            <button class="btn-account" data-bs-toggle="modal" data-bs-target="#authModal">
+                                <i class="fas fa-user-circle me-2"></i> Tài khoản
+                            </button>
+                        }
+                    }
+
+                    @* --- GIỎ HÀNG (GIỮ NGUYÊN) --- *@
+                    <a asp-controller="Cart" asp-action="Index" class="cart-icon-wrapper">
+                        <i class="fas fa-shopping-cart"></i>
+                        @* Đây là cái chấm đỏ, Boss nhớ để đúng id="cartCountBadge" nhé *@
+                        <span id="cartCountBadge" class="cart-badge">0</span>
+                    </a>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <div class="modal fade auth-modal" id="authModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content shadow-lg">
+                <div class="auth-card">
+                    <div class="text-end"><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                    
+                    <div id="loginFormArea">
+                        <div class="text-center">
+                            <h2 class="auth-title">Đăng nhập</h2>
+                            <p class="auth-subtitle">Chào mừng bạn quay trở lại Coffee House☕</p>
+                        </div>
+                        <form action="/Account/Login" method="post">
+                            <label class="small fw-bold ms-1 mb-1">Email</label>
+                            <div class="input-group-auth">
+                                <i class="far fa-envelope"></i>
+                                <input type="email" name="Email" placeholder="email@example.com" required>
+                            </div>
+                            
+                            <div class="d-flex justify-content-between mb-1 px-1">
+                                <label class="small fw-bold">Mật khẩu</label>
+                                <a href="javascript:void(0)" onclick="featureDeveloping()" class="forgot-link">Quên mật khẩu?</a>
+                            </div>
+                            <div class="input-group-auth">
+                                <i class="fas fa-lock"></i>
+                                <input type="password" name="Password" id="loginPassInput" placeholder="********" required>
+                                <i class="far fa-eye ms-auto" id="toggleLoginPass" style="cursor:pointer"></i>
+                            </div>
+
+                            <div class="form-check mb-3 ms-1">
+                                <input class="form-check-input" type="checkbox" id="rememberMe">
+                                <label class="form-check-label" for="rememberMe">Ghi nhớ đăng nhập</label>
+                            </div>
+
+                            <button type="submit" class="btn-auth-submit">ĐĂNG NHẬP NGAY 🚀</button>
+                        </form>
+
+                        <div class="text-center auth-switch-text">
+                            Chưa có tài khoản? <span class="auth-switch-link" onclick="toggleAuthForm('register')">Đăng ký ngay</span>
+                        </div>
+
+                        <div class="d-flex align-items-center my-4">
+                            <hr class="flex-grow-1 text-muted">
+                            <span class="px-3 text-muted small">Hoặc đăng nhập với</span>
+                            <hr class="flex-grow-1 text-muted">
+                        </div>
+
+                        <div class="d-flex justify-content-between gap-2">
+                            <a href="/Account/ExternalLogin?provider=Google" class="social-btn w-50">
+                                <img src="https://img.icons8.com/color/48/google-logo.png"> Google
+                            </a>
+                            <a href="/Account/ExternalLogin?provider=Facebook" class="social-btn w-50">
+                                <img src="https://img.icons8.com/color/48/facebook-new.png"> Facebook
+                            </a>
+                        </div>
+                    </div>
+
+                    <div id="registerFormArea" style="display: none;">
+                        <div class="text-center">
+                            <h2 class="auth-title">Đăng ký tài khoản</h2>
+                            <p class="auth-subtitle">Tạo tài khoản mới để trải nghiệm Coffee House☕</p>
+                        </div>
+                        <form action="/Account/Register" method="post">
+                            <label class="small fw-bold ms-1 mb-1">Họ tên</label>
+                            <div class="input-group-auth">
+                                <i class="far fa-user"></i>
+                                <input type="text" name="FullName" placeholder="Nguyễn Văn A" required>
+                            </div>
+
+                            <label class="small fw-bold ms-1 mb-1">Email</label>
+                            <div class="input-group-auth">
+                                <i class="far fa-envelope"></i>
+                                <input type="email" name="Email" placeholder="email@example.com" required>
+                            </div>
+
+                            <label class="small fw-bold ms-1 mb-1">Số điện thoại</label>
+                            <div class="input-group-auth">
+                                <i class="fas fa-phone-alt"></i>
+                                <input type="text" name="Phone" placeholder="0912345678" required>
+                            </div>
+
+                            <label class="small fw-bold ms-1 mb-1">Mật khẩu</label>
+                            <div class="input-group-auth">
+                                <i class="fas fa-lock"></i>
+                                <input type="password" name="Password" placeholder="********" required>
+                            </div>
+
+                            <label class="small fw-bold ms-1 mb-1">Xác nhận mật khẩu</label>
+                            <div class="input-group-auth">
+                                <i class="fas fa-check-circle"></i>
+                                <input type="password" name="ConfirmPassword" placeholder="********" required>
+                            </div>
+
+                            <button type="submit" class="btn-auth-submit">ĐNG KÝ NGAY ✨</button>
+                        </form>
+
+                        <div class="text-center auth-switch-text">
+                            Bạn đã có tài khoản? <span class="auth-switch-link" onclick="toggleAuthForm('login')">Đăng nhập ngay</span>
+                        </div>
+                    </div>
+
+                    <div class="text-center mt-4">
+                        <a href="javascript:void(0)" class="text-muted small text-decoration-none" data-bs-dismiss="modal">← Quay lại trang chủ</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <main role="main">@RenderBody()</main>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 1. Chuyển đổi Form
+        function toggleAuthForm(target) {
+            const loginArea = document.getElementById('loginFormArea');
+            const registerArea = document.getElementById('registerFormArea');
+            if (target === 'register') {
+                loginArea.style.display = 'none';
+                registerArea.style.display = 'block';
+            } else {
+                loginArea.style.display = 'block';
+                registerArea.style.display = 'none';
+            }
+        }
+
+        // 2. Ẩn/Hiện mật khẩu
+        const togglePass = document.querySelector('#toggleLoginPass');
+        const passwordInput = document.querySelector('#loginPassInput');
+        if (togglePass) {
+            togglePass.addEventListener('click', function() {
+                const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                passwordInput.setAttribute('type', type);
+                this.classList.toggle('fa-eye');
+                this.classList.toggle('fa-eye-slash');
+            });
+        }
+
+        // 3. Thông báo tính năng đang phát triển
+        function featureDeveloping() {
+            Swal.fire({
+                title: 'Tính năng đang phát triển!',
+                text: 'Hệ thống đang được cập nhật, vui lòng quay lại sau nha Boss! ☕',
+                icon: 'info',
+                confirmButtonColor: '#3d2b1f'
+            });
+        }
+
+        // 4. Cập nhật số lượng giỏ hàng
+        function updateCartBadge() {
+            const currentUser = '@(Context.Session.GetString("UserName") ?? "Khach_Vang_Lai")';
+            const CART_KEY = 'coffee_cart_' + currentUser;
+
+            let cart = [];
+            try {
+                cart = JSON.parse(sessionStorage.getItem(CART_KEY)) || [];
+            } catch (e) {
+                cart = [];
+            }
+
+            const totalQuantity = cart.reduce((sum, item) => sum + (parseInt(item.quantity) || 0), 0);
+
+            const badge = document.getElementById('cartCountBadge');
+            if (badge) {
+                const currentCount = parseInt(badge.innerText) || 0;
+
+                if (totalQuantity > 0) {
+                    if (totalQuantity !== currentCount) {
+                        badge.classList.add('badge-pop');
+                        setTimeout(() => badge.classList.remove('badge-pop'), 300);
+                    }
+
+                    badge.innerText = totalQuantity;
+                    badge.style.display = 'block';
+                } else {
+                    badge.innerText = '0';
+                    badge.style.display = 'none';
+                }
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', updateCartBadge);
+    </script>
+
+    @if (TempData["Success"] != null)
+    {
+        <script>
+            Swal.fire({
+                icon: 'success',
+                title: 'Thành công!',
+                html: '@Html.Raw(TempData["Success"])', 
+                confirmButtonColor: '#3d2b1f'
+            });
+        </script>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <script>
+            Swal.fire({
+                icon: 'error',
+                title: 'Lỗi rồi Boss ơi...',
+                html: '@Html.Raw(TempData["Error"])', 
+                confirmButtonColor: '#3d2b1f'
+            });
+        </script>
+    }
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+
+<footer class="coffee-footer pt-5 pb-3">
+    <div class="container">
+        <div class="row g-4">
+            <div class="col-lg-3 col-md-6">
+                <h6 class="fw-bold text-uppercase mb-4">Coffee House </h6>
+                <p class="small opacity-75">Địa chỉ: 123 Đường Bắc Kạn, TP. Thái Nguyên</p>
+                <p class="small opacity-75">Điện thoại: 0123 456 789</p>
+                <p class="small opacity-75">Email: cskh.coffeehouse@gmail.com</p>
+                <div class="social-icons d-flex gap-2 mt-4">
+                    <a href="#"><i class="fab fa-facebook-f"></i></a>
+                    <a href="#"><i class="fab fa-instagram"></i></a>
+                    <a href="#"><i class="fab fa-youtube"></i></a>
+                    <a href="#"><i class="fab fa-tiktok"></i></a>
+                </div>
+            </div>
+
+            <div class="col-lg-3 col-md-6">
+                <h6 class="fw-bold text-uppercase mb-4">Công ty</h6>
+                <ul class="list-unstyled footer-links">
+                    <li><a href="#">Về Coffee House</a></li>
+                    <li><a href="#">Tuyển dụng & Việc làm</a></li>
+                    <li><a href="#">Tin tức mới nhất</a></li>
+                    <li><a href="#">Chăm sóc khách hàng</a></li>
+                </ul>
+            </div>
+
+            <div class="col-lg-3 col-md-6">
+                <h6 class="fw-bold text-uppercase mb-4">Chính sách khách hàng</h6>
+                <ul class="list-unstyled footer-links">
+                    <li><a href="#">Chính sách thành viên</a></li>
+                    <li><a href="#">Chính sách đổi trả món</a></li>
+                    <li><a href="#">Chính sách bảo mật</a></li>
+                    <li><a href="#">Hướng dẫn đặt hàng</a></li>
+                    <li><a href="#">Câu hỏi thường gặp (FAQ)</a></li>
+                </ul>
+            </div>
+
+            <div class="col-lg-3 col-md-6">
+                <h6 class="fw-bold text-uppercase mb-4">Hệ thống cửa hàng</h6>
+                <div class="store-info mb-3">
+                    <p class="fw-bold mb-1 small">CHI NHÁNH 1</p>
+                    <p class="small opacity-75 mb-0">Trường ĐH Công nghệ Thông tin & Truyền thông - ICTU</p>
+                </div>
+                <a href="#" class="text-decoration-underline small text-white opacity-75">Xem tất cả cửa hàng</a>
+            </div>
+        </div>
+
+        <hr class="mt-5 opacity-25" style="border-top: 1px solid #fff;">
+        
+        <div class="text-center mt-4">
+            <p class="small opacity-50 mb-0">© Bản quyền thuộc về Nguyễn Thị Thanh Tâm </p>
+        </div>
+    </div>
+</footer>
+</html>

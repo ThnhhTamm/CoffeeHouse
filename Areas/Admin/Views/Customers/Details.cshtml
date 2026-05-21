@@ -1,0 +1,165 @@
+@model CoffeeHouseAdmin.Models.Customer
+
+<div class="container-fluid py-4 px-4">
+    <a href="/Admin/Customers" class="btn btn-light shadow-sm mb-4 fw-bold text-muted" style="border-radius: 12px;">
+        <i class="fas fa-arrow-left me-2"></i> Quay lại danh sách
+    </a>
+
+    <div class="row g-4">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm text-center p-4 h-100" style="border-radius: 20px;">
+                <div class="bg-light rounded-circle d-flex justify-content-center align-items-center mx-auto mb-3 shadow-sm" style="width: 110px; height: 110px;">
+                    <i class="fas fa-user fa-4x text-secondary"></i>
+                </div>
+                <h4 class="fw-bold mb-1" style="color: #3d2b1f;">@Model.FullName</h4>
+                <p class="text-muted mb-3">Mã KH: @Model.CustomerID</p>
+                
+                @{
+                    var badgeClass = Model.Rank switch {
+                        "VIP Vàng" => "bg-warning-subtle text-warning border-warning",
+                        "VIP Bạc" => "bg-secondary-subtle text-secondary border-secondary",
+                        "Thành viên" => "bg-info-subtle text-info border-info",
+                        _ => "bg-light text-muted border-light"
+                    };
+                }
+                <span class="badge rounded-pill border px-4 py-2 @badgeClass fs-6 mb-4">@Model.Rank</span>
+
+                <hr class="opacity-25 my-2">
+                
+                <div class="text-start mt-3 px-2">
+                    <p class="mb-3"><i class="fas fa-phone-alt text-muted me-3"></i> <span class="fw-bold">@Model.Phone</span></p>
+                    <p class="mb-3"><i class="fas fa-envelope text-muted me-3"></i> <span class="fw-bold">@(string.IsNullOrEmpty(Model.Email) ? "Chưa cập nhật" : Model.Email)</span></p>
+                    <p class="mb-0"><i class="fas fa-map-marker-alt text-muted me-3"></i> <span class="fw-bold text-muted">Chưa có địa chỉ</span></p>
+                </div>
+                
+                <button type="button" class="btn btn-outline-dark w-100 mt-auto py-2" style="border-radius: 12px;" data-bs-toggle="modal" data-bs-target="#editCustomerModal">
+                    <i class="fas fa-edit me-2"></i>Chỉnh sửa hồ sơ
+                </button>
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            <div class="row g-3 mb-4">
+                <div class="col-md-6">
+                    <div class="card border-0 shadow-sm p-4 d-flex flex-row align-items-center h-100" style="border-radius: 20px;">
+                        <div class="bg-primary-subtle p-3 rounded-4 me-3">
+                            <i class="fas fa-shopping-bag text-primary fa-2x"></i>
+                        </div>
+                        <div>
+                            <small class="text-muted fw-bold d-block mb-1">Tổng số đơn hàng</small>
+                            <h3 class="fw-bold mb-0">@Model.TotalOrders <span class="fs-6 text-muted fw-normal">đơn</span></h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card border-0 shadow-sm p-4 d-flex flex-row align-items-center h-100" style="border-radius: 20px;">
+                        <div class="bg-danger-subtle p-3 rounded-4 me-3">
+                            <i class="fas fa-wallet text-danger fa-2x"></i>
+                        </div>
+                        <div>
+                            <small class="text-muted fw-bold d-block mb-1">Tổng chi tiêu</small>
+                            <h3 class="fw-bold text-danger mb-0">@Model.TotalSpent.ToString("N0")đ</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm p-4 mb-4" style="border-radius: 20px; background-color: #fffaf0;">
+                <h5 class="fw-bold mb-3" style="color: #3d2b1f;"><i class="fas fa-heart me-2 text-danger"></i> Món yêu thích nhất</h5>
+                <div class="d-flex gap-2 flex-wrap">
+                   @if (ViewBag.FavoriteProducts != null) {
+    @foreach (var item in (Dictionary<string, int>)ViewBag.FavoriteProducts) {
+        <span class="badge bg-white text-dark border px-3 py-2 fs-6 rounded-pill shadow-sm">
+            @item.Key <span class="text-danger fw-bold ms-1">(@item.Value)</span>
+        </span>
+    }
+} else {
+    <span class="text-muted small italic">Chưa có dữ liệu món yêu thích</span>
+}
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm p-4" style="border-radius: 20px;">
+                <h5 class="fw-bold mb-4" style="color: #3d2b1f;"><i class="fas fa-history me-2 text-secondary"></i> Lịch sử mua hàng gần đây</h5>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="bg-light text-muted small">
+                            <tr>
+                                <th class="ps-3 py-3">MÃ ĐƠN</th>
+                                <th>THỜI GIAN</th>
+                                <th>TỔNG TIỀN</th>
+                                <th>TRẠNG THÁI</th>
+                            </tr>
+                        </thead>
+                       <tbody>
+    @* 1. Kiểm tra túi dữ liệu có trống hay không *@
+    @if (ViewBag.OrderHistory != null && ((List<CoffeeHouseAdmin.Models.Order>)ViewBag.OrderHistory).Any())
+    {
+        @* 2. Nếu có, mình lấy từng đơn ra để hiện *@
+        foreach (var order in (List<CoffeeHouseAdmin.Models.Order>)ViewBag.OrderHistory)
+        {
+            <tr>
+                <td class="ps-3 fw-bold text-primary">@order.OrderID</td>
+                @* Dùng OrderDate như đã sửa ở Controller *@
+                <td class="text-muted">@order.OrderDate.ToString("dd/MM/yyyy HH:mm")</td>
+                @* Dùng TotalAmount để tính tiền *@
+                <td class="fw-bold">@order.TotalAmount.ToString("N0")đ</td>
+                <td>
+                    <span class="badge bg-success-subtle text-success px-3 py-2 rounded-pill border border-success">
+                        @order.Status
+                    </span>
+                </td>
+            </tr>
+        }
+    }
+    else
+    {
+        @* 3. Nếu không có gì (hoặc bị null), hiện thông báo cho đỡ trống trải *@
+        <tr>
+            <td colspan="4" class="text-center p-5 text-muted">
+                <i class="fas fa-box-open fa-2x d-block mb-2"></i>
+                Chưa có lịch sử mua hàng nào cho khách này.
+            </td>
+        </tr>
+    }
+</tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="editCustomerModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow" style="border-radius: 20px; border: none;">
+            <div class="modal-header bg-light" style="border-radius: 20px 20px 0 0; border-bottom: none;">
+                <h5 class="modal-title fw-bold" style="color: #3d2b1f;"><i class="fas fa-user-edit me-2"></i>Chỉnh sửa thông tin</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            
+            <form asp-action="Edit" method="post">
+                <div class="modal-body p-4">
+                    <input type="hidden" name="CustomerID" value="@Model.CustomerID" />
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Tên khách hàng <span class="text-danger">*</span></label>
+                        <input type="text" name="FullName" class="form-control" style="border-radius: 10px;" required value="@Model.FullName">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Số điện thoại <span class="text-danger">*</span></label>
+                        <input type="text" name="Phone" class="form-control" style="border-radius: 10px;" required value="@Model.Phone">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Email</label>
+                        <input type="email" name="Email" class="form-control" style="border-radius: 10px;" value="@Model.Email">
+                    </div>
+                </div>
+                <div class="modal-footer border-top-0 justify-content-center pb-4">
+                    <button type="button" class="btn btn-light px-4 py-2 fw-bold" style="border-radius: 12px;" data-bs-dismiss="modal">HỦY BỎ</button>
+                    <button type="submit" class="btn btn-dark px-5 py-2 fw-bold" style="border-radius: 12px;">LƯU THAY ĐỔI</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

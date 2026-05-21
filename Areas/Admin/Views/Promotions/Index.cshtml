@@ -1,0 +1,93 @@
+@model IEnumerable<CoffeeHouseAdmin.Models.Promotion>
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold" style="color: #3d2b1f;">Quản lý Khuyến mãi 🏷️</h2>
+        <button class="btn btn-dark rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#createModal">
+            <i class="fas fa-plus me-2"></i>Thêm mã mới
+        </button>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4">
+        <div class="card-body p-0">
+            <table class="table table-hover mb-0 align-middle">
+                <thead class="bg-light">
+                    <tr>
+                        <th class="ps-4">Mã Voucher</th>
+                        <th>Giảm giá</th>
+                        <th>Đơn tối thiểu</th>
+                        <th>Hết hạn</th>
+                        <th>Trạng thái</th>
+                        <th class="text-end pe-4">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model) {
+                        <tr>
+                            <td class="ps-4 fw-bold">@item.PromoCode</td>
+                            <td class="text-danger">
+                                @* Đã sửa lỗi toLocaleString() thành ToString("N0") *@
+                                @(item.DiscountPercent > 0 ? item.DiscountPercent + "%" : item.DiscountAmount.ToString("N0") + "đ")
+                            </td>
+                            <td>@item.MinOrderAmount.ToString("N0")đ</td>
+                            <td>@item.ExpiryDate.ToString("dd/MM/yyyy")</td>
+                            <td>
+                                <span class="badge @(item.IsActive ? "bg-success" : "bg-secondary")">
+                                    @(item.IsActive ? "Đang chạy" : "Đã khóa")
+                                </span>
+                            </td>
+                            @* Thêm cột Thao tác còn thiếu để bảng không bị xô lệch *@
+                            <td class="text-end pe-4">
+                                <form asp-action="ToggleStatus" asp-route-id="@item.PromoId" method="post" style="display:inline;">
+                                    <button type="submit" class="btn btn-sm @(item.IsActive ? "btn-outline-danger" : "btn-outline-success") rounded-pill px-3">
+                                        <i class="fas @(item.IsActive ? "fa-lock" : "fa-lock-open") me-1"></i>
+                                        @(item.IsActive ? "Khóa mã" : "Mở mã")
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@* Giữ nguyên Modal cũ của Boss *@
+<div class="modal fade" id="createModal" tabindex="-1">
+    <div class="modal-dialog">
+        <form asp-action="Create" method="post" class="modal-content rounded-4">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-bold">Tạo mã khuyến mãi mới</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Mã Code</label>
+                    <input type="text" name="code" class="form-control" placeholder="VD: CHILLCAFE" required>
+                </div>
+                <div class="row">
+                    <div class="col-6 mb-3">
+                        <label class="form-label">% Giảm</label>
+                        <input type="number" name="percent" class="form-control" value="0">
+                    </div>
+                    <div class="col-6 mb-3">
+                        <label class="form-label">Số tiền giảm (đ)</label>
+                        <input type="number" name="amount" class="form-control" value="0">
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Đơn tối thiểu (đ)</label>
+                    <input type="number" name="minOrder" class="form-control" value="20000">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Ngày hết hạn</label>
+                    <input type="date" name="expiry" class="form-control" required>
+                </div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="submit" class="btn btn-dark w-100 rounded-pill">Xác nhận tạo mã</button>
+            </div>
+        </form>
+    </div>
+</div>

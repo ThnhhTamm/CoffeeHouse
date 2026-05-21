@@ -1,0 +1,326 @@
+@model IEnumerable<CoffeeHouseAdmin.Models.ChatLog>
+
+<style>
+    /* CSS trang trí riêng cho cái Popup AI VIP */
+    .ai-tabs .nav-link { color: #877e66; border: none; border-bottom: 3px solid transparent; font-weight: bold; padding: 1rem 1.5rem; transition: all 0.3s ease; }
+    .ai-tabs .nav-link:hover { color: #3d2b1f; }
+    .ai-tabs .nav-link.active { color: #3d2b1f; border-bottom: 3px solid #3d2b1f; background: transparent; }
+    .range-vip { -webkit-appearance: none; width: 100%; height: 8px; border-radius: 5px; background: #e9ecef; outline: none; }
+    .range-vip::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 20px; height: 20px; border-radius: 50%; background: #3d2b1f; cursor: pointer; border: 2px solid #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+</style>
+
+<div class="container-fluid py-4 px-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold d-flex align-items-center" style="color: #3d2b1f;">
+                <i class="fas fa-robot me-3 text-secondary"></i> AI Chat Logs
+            </h2>
+            <p class="text-muted mb-0">Giám sát các cuộc trò chuyện giữa AI Bot và Khách hàng.</p>
+        </div>
+        <button type="button" class="btn text-white px-4 py-2 shadow-sm" style="background: linear-gradient(135deg, #3d2b1f 0%, #6b4c3a 100%); border-radius: 12px; font-weight: 500;" data-bs-toggle="modal" data-bs-target="#botConfigModal">
+            <i class="fas fa-microchip me-2 text-warning"></i> Huấn luyện AI
+        </button>
+    </div>
+
+    <div class="row g-3 mb-4 text-center">
+        <div class="col"><div class="card border-0 shadow-sm p-3 bg-light" style="border-radius: 15px;"><h3 class="fw-bold">@ViewBag.Total</h3><small class="fw-bold text-muted">Tổng phiên Chat</small></div></div>
+        <div class="col"><div class="card border-0 shadow-sm p-3 bg-success-subtle" style="border-radius: 15px;"><h3 class="fw-bold text-success">@ViewBag.Resolved</h3><small class="fw-bold text-success">AI Tự xử lý thành công</small></div></div>
+        <div class="col"><div class="card border-0 shadow-sm p-3 bg-danger-subtle" style="border-radius: 15px;"><h3 class="fw-bold text-danger">@ViewBag.NeedHelp</h3><small class="fw-bold text-danger">Cần nhân viên can thiệp</small></div></div>
+    </div>
+
+    <div class="card border-0 shadow-sm mb-4" style="border-radius: 20px;">
+        <div class="card-body p-3">
+            <form asp-action="Index" method="get" class="row g-3">
+                <div class="col-md-10 position-relative d-flex align-items-center">
+                    <i class="fas fa-search position-absolute text-muted" style="left: 25px; top: 18px;"></i>
+                    <input name="search" type="text" class="form-control border-0 bg-light py-3 ps-5 pe-5" 
+                           style="border-radius: 15px;" placeholder="Tìm kiếm nội dung chat, tên khách hàng..."
+                           value="@ViewBag.SearchTerm">
+                    
+                    @if (!string.IsNullOrEmpty(ViewBag.SearchTerm))
+                    {
+                        <a href="/Admin/ChatLogs" class="position-absolute text-muted text-decoration-none" style="right: 25px; top: 16px; font-size: 1.2rem;" title="Xóa tìm kiếm">
+                            <i class="fas fa-times-circle"></i>
+                        </a>
+                    }
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn w-100 py-3 fw-bold text-white shadow-sm" 
+                            style="background: #877e66; border-radius: 12px;">TÌM KIẾM</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm overflow-hidden" style="border-radius: 20px;">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead style="background-color: #3d2b1f; color: white;">
+                    <tr class="text-uppercase small">
+                        <th class="ps-4 py-3">Mã Chat</th>
+                        <th>Khách hàng</th>
+                        <th>Nội dung tóm tắt</th>
+                        <th>Chủ đề</th>
+                        <th>Trạng thái</th>
+                        <th>Thời gian</th>
+                        <th class="text-center">Chi tiết</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white">
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td class="ps-4 text-muted fw-bold">@item.Id</td>
+                            <td class="fw-bold">@item.CustomerName</td>
+                            <td>
+                                <div class="text-truncate" style="max-width: 250px;" title="@item.UserMessage">
+                                    <i class="fas fa-comment-dots text-muted me-2"></i>@item.UserMessage
+                                </div>
+                            </td>
+                            <td>
+                                @{
+                                    var intentColor = item.Intent switch {
+                                        "Khiếu nại" => "text-danger",
+                                        "Hỏi Menu" => "text-primary",
+                                        "Đặt bàn" => "text-success",
+                                        _ => "text-secondary"
+                                    };
+                                }
+                                <span class="fw-bold @intentColor">@item.Intent</span>
+                            </td>
+                            <td>
+                                @{
+                                    var statusClass = item.Status == "Cần hỗ trợ" ? "bg-danger text-white" : "bg-success-subtle text-success border-success";
+                                }
+                                <span class="badge rounded-pill border px-3 py-2 @statusClass">@item.Status</span>
+                            </td>
+                            <td class="text-muted small">@item.CreatedAt.ToString("HH:mm - dd/MM")</td>
+                            
+                            <td class="text-center">
+                                <button type="button" class="btn btn-sm btn-info text-white rounded-circle shadow-sm" 
+                                        style="width: 32px; height: 32px;"
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#chatModal"
+                                        data-customer="@item.CustomerName"
+                                        data-user="@item.UserMessage"
+                                       data-ai="@Html.Raw(item.AIResponse)"
+                                        data-time="@item.CreatedAt.ToString("HH:mm")"
+                                        title="Đọc đoạn chat">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="chatModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow" style="border-radius: 20px; border: none; background-color: #f8f9fa;">
+            <div class="modal-header bg-white shadow-sm" style="border-radius: 20px 20px 0 0; z-index: 10;">
+                <h5 class="modal-title fw-bold" style="color: #3d2b1f;">
+                    <i class="fas fa-user-circle me-2 fs-4 text-secondary align-middle"></i> 
+                    <span id="modalCustomerName">Khách hàng</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            
+            <div class="modal-body p-4" style="height: 350px; overflow-y: auto;">
+                <div class="d-flex flex-row justify-content-end mb-4">
+                    <div>
+                        <p class="small p-3 mb-1 text-white rounded-4 shadow-sm" style="background-color: #3d2b1f;" id="modalUserMsg">Tin nhắn khách...</p>
+                        <p class="small mb-0 text-muted d-flex justify-content-end" id="modalTime1">12:00</p>
+                    </div>
+                </div>
+
+                <div class="d-flex flex-row justify-content-start mb-4">
+                    <div class="bg-light rounded-circle d-flex justify-content-center align-items-center me-2 shadow-sm" style="width: 40px; height: 40px; flex-shrink: 0;">
+                        <i class="fas fa-robot text-primary"></i>
+                    </div>
+                    <div>
+                        <p class="small p-3 mb-1 rounded-4 shadow-sm bg-white border" id="modalAIMsg">AI trả lời...</p>
+                        <p class="small mb-0 text-muted" id="modalTime2">12:00</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="modal-footer bg-white border-top-0 justify-content-between p-3" style="border-radius: 0 0 20px 20px;">
+                <button type="button" class="btn btn-outline-danger fw-bold rounded-pill px-4">
+                    <i class="fas fa-hand-paper me-2"></i> Nhân viên tiếp quản
+                </button>
+                <button type="button" class="btn btn-dark fw-bold rounded-pill px-4" data-bs-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="botConfigModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl"> <div class="modal-content shadow-lg border-0" style="border-radius: 20px; overflow: hidden;">
+            
+            <div class="modal-header text-white" style="background: linear-gradient(135deg, #1e1e1e 0%, #3d2b1f 100%); border-bottom: none; padding: 1.5rem;">
+                <h4 class="modal-title fw-bold mb-0">
+                    <i class="fas fa-brain me-3 text-warning"></i> TRUNG TÂM HUẤN LUYỆN AI
+                </h4>
+                <div class="ms-auto d-flex align-items-center">
+                    <span class="badge bg-success me-3"><i class="fas fa-circle me-1" style="font-size: 8px;"></i> Đang hoạt động</span>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+            </div>
+
+            <div class="modal-body p-0 bg-light">
+                <ul class="nav nav-tabs nav-fill bg-white border-bottom-0 pt-2 px-3 shadow-sm ai-tabs" id="aiTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#persona" type="button" role="tab">
+                            <i class="fas fa-mask me-2"></i> Nhận diện & Tính cách
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#knowledge" type="button" role="tab">
+                            <i class="fas fa-database me-2"></i> Nguồn kiến thức
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#integration" type="button" role="tab">
+                            <i class="fas fa-plug me-2"></i> Đa kênh
+                        </button>
+                    </li>
+                </ul>
+
+                <form action="#" method="post">
+                    <div class="tab-content p-4" id="aiTabContent">
+                        
+                        <div class="tab-pane fade show active" id="persona" role="tabpanel">
+                            <div class="row g-4">
+                                <div class="col-md-4 text-center">
+                                    <div class="card border-0 shadow-sm h-100 p-4" style="border-radius: 15px;">
+                                        <div class="bg-light rounded-circle d-flex justify-content-center align-items-center mx-auto mb-3 shadow-inner" style="width: 120px; height: 120px; border: 4px solid #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+                                            <i class="fas fa-robot fa-4x text-primary"></i>
+                                        </div>
+                                        <button type="button" class="btn btn-sm btn-outline-dark rounded-pill mb-3">Tải ảnh Avatar mới</button>
+                                        <input type="text" class="form-control text-center fw-bold fs-5" value="Bé Phin AI" style="border-radius: 10px;">
+                                    </div>
+                                </div>
+                                <div class="col-md-8">
+                                    <div class="card border-0 shadow-sm h-100 p-4" style="border-radius: 15px;">
+                                        <div class="mb-4">
+                                            <label class="form-label fw-bold"><i class="fas fa-sliders-h me-2 text-warning"></i> Điều chỉnh "Thái độ" (Tone of Voice)</label>
+                                            <div class="d-flex justify-content-between text-muted small fw-bold mb-2">
+                                                <span>Nghiêm túc / Chuyên nghiệp</span>
+                                                <span>Thân thiện</span>
+                                                <span>Trẻ trung / GenZ</span>
+                                            </div>
+                                            <input type="range" class="range-vip" min="1" max="3" step="1" value="2">
+                                        </div>
+                                        <div class="mb-0">
+                                            <label class="form-label fw-bold"><i class="fas fa-terminal me-2 text-success"></i> Chỉ thị cốt lõi (System Prompt)</label>
+                                            <textarea class="form-control text-dark" rows="4" style="border-radius: 10px; border: 1px solid #dee2e6; background-color: #f8f9fa;">Bạn là trợ lý ảo xuất sắc của Coffee House. Hãy trả lời ngắn gọn, vui vẻ. Ưu tiên chốt sale các món best-seller như Cà phê Sữa Đá. Nếu không biết, hãy xin lỗi và chuyển cho nhân viên thật.</textarea>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="tab-pane fade" id="knowledge" role="tabpanel">
+                            <div class="row g-4">
+                                <div class="col-md-6">
+                                    <div class="card border-0 shadow-sm p-4 h-100" style="border-radius: 15px;">
+                                        <h6 class="fw-bold mb-3"><i class="fas fa-sync me-2 text-primary"></i> Đồng bộ tự động</h6>
+                                        <p class="small text-muted">Bot sẽ tự động học các món nước mới, giá tiền và trạng thái bàn trống từ hệ thống.</p>
+                                        <button type="button" class="btn btn-outline-primary fw-bold w-100 py-3" style="border-radius: 12px; border-style: dashed; border-width: 2px;">
+                                            <i class="fas fa-cloud-download-alt me-2"></i> Đồng bộ Menu & Sơ đồ bàn ngay
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card border-0 shadow-sm p-4 h-100" style="border-radius: 15px;">
+                                        <h6 class="fw-bold mb-3 text-danger"><i class="fas fa-exclamation-circle me-2"></i> Quy tắc "Cầu Cứu" (Handoff)</h6>
+                                        <p class="small text-muted">Nếu khách chat những từ này, Bot sẽ nín lặng và hú còi cho nhân viên thật vào tiếp quản.</p>
+                                        <textarea class="form-control border-danger-subtle text-danger fw-bold" rows="3" style="border-radius: 10px;">khiếu nại, dở tệ, thái độ, muốn gặp quản lý, ngộ độc, hoàn tiền</textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="tab-pane fade" id="integration" role="tabpanel">
+                            <div class="card border-0 shadow-sm p-4" style="border-radius: 15px;">
+                                <h6 class="fw-bold mb-4"><i class="fas fa-share-alt me-2 text-info"></i> Các kênh AI đang trực chiến</h6>
+                                
+                                <div class="d-flex align-items-center justify-content-between p-3 border rounded-3 mb-3 bg-white shadow-sm">
+                                    <div class="d-flex align-items-center">
+                                        <i class="fas fa-globe fa-2x text-primary me-3"></i>
+                                        <div>
+                                            <h6 class="mb-0 fw-bold">Live Chat Website</h6>
+                                            <small class="text-muted">Chat bong bóng trên trang chủ quán</small>
+                                        </div>
+                                    </div>
+                                    <div class="form-check form-switch fs-4 m-0">
+                                        <input class="form-check-input" type="checkbox" checked>
+                                    </div>
+                                </div>
+
+                                <div class="d-flex align-items-center justify-content-between p-3 border rounded-3 mb-3 bg-white shadow-sm">
+                                    <div class="d-flex align-items-center">
+                                        <i class="fab fa-facebook-messenger fa-2x text-info me-3"></i>
+                                        <div>
+                                            <h6 class="mb-0 fw-bold">Facebook Messenger</h6>
+                                            <small class="text-muted">Đã liên kết Fanpage: Coffee House Official</small>
+                                        </div>
+                                    </div>
+                                    <div class="form-check form-switch fs-4 m-0">
+                                        <input class="form-check-input" type="checkbox" checked>
+                                    </div>
+                                </div>
+
+                                <div class="d-flex align-items-center justify-content-between p-3 border rounded-3 bg-white shadow-sm">
+                                    <div class="d-flex align-items-center">
+                                        <i class="fas fa-comment fa-2x text-success me-3"></i>
+                                        <div>
+                                            <h6 class="mb-0 fw-bold">Zalo Mini App</h6>
+                                            <small class="text-danger">Chưa kết nối API Zalo</small>
+                                        </div>
+                                    </div>
+                                    <div class="form-check form-switch fs-4 m-0">
+                                        <input class="form-check-input" type="checkbox">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                    </div>
+                </form>
+            </div>
+            
+            <div class="modal-footer bg-white justify-content-between p-3 border-top" style="border-radius: 0 0 20px 20px;">
+                <span class="text-muted small"><i class="fas fa-check-circle text-success me-1"></i> Hệ thống đã sao lưu 5 phút trước.</span>
+                <div>
+                    <button type="button" class="btn btn-light px-4 py-2 fw-bold me-2" style="border-radius: 12px;" data-bs-dismiss="modal">HỦY</button>
+                    <button type="button" class="btn btn-dark px-5 py-2 fw-bold shadow-sm" style="border-radius: 12px; background: linear-gradient(135deg, #3d2b1f 0%, #1e1e1e 100%);" onclick="alert('Đã đồng bộ não bộ AI lên Cloud thành công!');" data-bs-dismiss="modal">
+                        <i class="fas fa-satellite-dish me-2"></i> LƯU VÀ ĐỒNG BỘ NÃO BỘ
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        var chatModal = document.getElementById('chatModal')
+        chatModal.addEventListener('show.bs.modal', function (event) {
+            var button = event.relatedTarget;
+            var customer = button.getAttribute('data-customer');
+            var userMsg = button.getAttribute('data-user');
+            var aiMsg = button.getAttribute('data-ai');
+            var time = button.getAttribute('data-time');
+
+            document.getElementById('modalCustomerName').textContent = customer;
+            document.getElementById('modalUserMsg').textContent = userMsg;
+            document.getElementById('modalAIMsg').innerHTML = aiMsg.replace(/\n/g, '<br>');          
+             document.getElementById('modalTime1').textContent = time;
+            document.getElementById('modalTime2').textContent = time;
+        })
+    </script>
+}

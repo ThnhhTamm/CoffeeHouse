@@ -1,0 +1,280 @@
+@model IEnumerable<dynamic>
+@{
+    ViewData["Title"] = "Hồ sơ cá nhân - " + ViewBag.FullName;
+}
+
+<style>
+    .profile-card { border-radius: 20px; border: none; transition: 0.3s; }
+    .nav-pills .nav-link { color: #5c4033; font-weight: 600; border-radius: 50px; padding: 12px 25px; transition: 0.3s; }
+    .nav-pills .nav-link.active { background-color: #3d2b1f !important; color: white !important; box-shadow: 0 4px 15px rgba(61, 43, 31, 0.2); }
+    .info-label { font-size: 0.85rem; font-weight: 700; color: #877e66; margin-bottom: 5px; display: block; }
+    .info-value { background-color: #f8f9fa; border-radius: 50px; padding: 10px 20px; border: 1px solid #eee; margin-bottom: 20px; min-height: 45px; display: flex; align-items: center; }
+    .status-badge { font-size: 0.75rem; padding: 5px 12px; border-radius: 50px; }
+    .breadcrumb-item a { color: #877e66; text-decoration: none; }
+    .breadcrumb-item.active { color: #3d2b1f; font-weight: bold; }
+    .text-bronze { color: #cd7f32 !important; }
+</style>
+
+<div class="container mt-4 pt-5 pb-5">
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/"><i class="fas fa-home"></i> Trang chủ</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Hồ sơ cá nhân</li>
+        </ol>
+    </nav>
+
+    <div class="row g-4">
+        <div class="col-lg-4">
+            <div class="card shadow-sm profile-card p-4 text-center">
+                <div class="position-relative d-inline-block mx-auto mb-3">
+                    <img src="https://ui-avatars.com/api/?name=@(ViewBag.FullName)&background=3d2b1f&color=fff&size=128" 
+                         class="rounded-circle shadow-sm" width="120" alt="Avatar">
+                    <span class="position-absolute bottom-0 end-0 bg-success border border-white rounded-circle p-2" title="Đang trực tuyến"></span>
+                </div>
+                
+                <h4 class="fw-bold mb-1" style="color: #3d2b1f;">@ViewBag.FullName</h4>
+                <p class="text-muted small mb-4">Thành viên thân thiết của <b>Coffee House</b> ☕</p>
+
+                <div class="nav flex-column nav-pills gap-2 text-start" id="v-pills-tab" role="tablist">
+                    <button class="nav-link active border" id="tab-info-btn" data-bs-toggle="pill" data-bs-target="#tab-info" type="button">
+                        <i class="fas fa-user-circle me-2"></i> Thông tin cá nhân
+                    </button>
+                    <button class="nav-link border" id="tab-orders-btn" data-bs-toggle="pill" data-bs-target="#tab-orders" type="button">
+                        <i class="fas fa-shopping-bag me-2"></i> Lịch sử đơn hàng
+                    </button>
+                    
+                    <hr class="my-3">
+                    <a href="/" class="btn btn-outline-dark rounded-pill fw-bold py-2">
+                        <i class="fas fa-arrow-left me-2"></i> Tiếp tục mua hàng
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-8">
+            <div class="card shadow-sm profile-card p-4 h-100">
+                <div class="tab-content" id="v-pills-tabContent">
+                    
+                    <div class="tab-pane fade show active" id="tab-info" role="tabpanel">
+                        <h4 class="fw-bold mb-4" style="color: #3d2b1f;">Thông tin cá nhân</h4>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <span class="info-label"><i class="fas fa-id-card me-1"></i> Họ và tên</span>
+                                <div class="info-value">@ViewBag.FullName</div>
+                            </div>
+                            <div class="col-md-6">
+                                <span class="info-label"><i class="fas fa-envelope me-1"></i> Email đăng ký</span>
+                                <div class="info-value">@(string.IsNullOrEmpty(ViewBag.Email) ? "Chưa có email" : ViewBag.Email)</div>
+                            </div>
+                            <div class="col-md-6">
+                                <span class="info-label"><i class="fas fa-phone me-1"></i> Số điện thoại</span>
+                                <div class="info-value">@(string.IsNullOrEmpty(ViewBag.Phone) ? "Chưa cập nhật" : ViewBag.Phone)</div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <span class="info-label"><i class="fas fa-crown me-1"></i> Hạng thành viên</span>
+                                <div class="info-value fw-bold @ViewBag.RankColor">@ViewBag.RankName</div>
+                                @if (Context.Session.GetString("UserRole") != "Admin" && ViewBag.TotalSpent != null)
+                                {
+                                    <p class="small text-muted ms-2 mt-n2">Tổng chi tiêu: <span class="fw-bold text-dark">@ViewBag.TotalSpent.ToString("N0")đ</span></p>
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="tab-pane fade" id="tab-orders" role="tabpanel">
+                        <h4 class="fw-bold mb-4" style="color: #3d2b1f;">Lịch sử đơn hàng</h4>
+                        @if (Model != null && Model.Any()) {
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle">
+                                    <thead class="table-light text-uppercase">
+                                        <tr style="font-size: 0.75rem;">
+                                            <th>Mã Đơn</th>
+                                            <th>Ngày Đặt</th>
+                                            <th>Tổng Tiền</th>
+                                            <th>Trạng Thái</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var order in Model) {
+                                            <tr>
+                                                <td class="fw-bold">
+                                                    <a href="javascript:void(0)" class="text-decoration-none text-primary" 
+                                                       onclick="viewOrderItems('@order.Id', '@order.Status')">
+                                                        #@order.Id
+                                                    </a>
+                                                </td>
+                                                <td class="small">@order.OrderDate.ToString("dd/MM/yyyy HH:mm")</td>
+                                                <td class="fw-bold text-danger">@order.TotalPrice.ToString("N0")đ</td>
+                                                <td>
+                                                    @if (order.Status == "Đã hủy") {
+                                                        <span class="badge bg-danger bg-opacity-10 text-danger status-badge">Đã hủy</span>
+                                                    } else if (order.Status == "Đang giao") {
+                                                        <span class="badge bg-primary bg-opacity-10 text-primary status-badge">Đang giao</span>
+                                                    } else {
+                                                        <span class="badge bg-success bg-opacity-10 text-success status-badge">@order.Status</span>
+                                                    }
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        } else {
+                            <div class="text-center py-5">
+                                <i class="fas fa-box-open fa-3x text-light mb-3"></i>
+                                <p class="text-muted">Boss chưa có đơn hàng nào cả. 🥰</p>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalItems" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow" style="border-radius: 20px;">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="fw-bold">📦 Chi tiết món ăn</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4"><div id="itemsContainer"></div></div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalReview" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content border-0 shadow" style="border-radius: 25px;">
+            <div class="modal-body text-center p-4">
+                <h6 class="fw-bold mb-3" id="reviewProdName">Tên món</h6>
+                <div class="stars-input mb-3 text-warning fs-2">
+                    <span class="star-rating" data-value="1" style="cursor:pointer;"><i class="far fa-star"></i></span>
+                    <span class="star-rating" data-value="2" style="cursor:pointer;"><i class="far fa-star"></i></span>
+                    <span class="star-rating" data-value="3" style="cursor:pointer;"><i class="far fa-star"></i></span>
+                    <span class="star-rating" data-value="4" style="cursor:pointer;"><i class="far fa-star"></i></span>
+                    <span class="star-rating" data-value="5" style="cursor:pointer;"><i class="far fa-star"></i></span>
+                    <input type="hidden" id="reviewStarValue" value="0">
+                </div>
+                <textarea id="reviewCommentText" class="form-control rounded-4 border-0 bg-light p-3 small" rows="3" placeholder="Boss thấy vị thế nào ạ?"></textarea>
+                <button class="btn btn-dark w-100 rounded-pill mt-3 py-2 fw-bold" onclick="submitReviewFinal()" style="background: #3d2b1f;">GỬI ĐÁNH GIÁ</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    let selectedProductId = 0;
+    let selectedOrderId = ''; // 🌟 Khai báo biến toàn cục để ghi nhớ mã đơn hàng
+
+    function viewOrderItems(orderId, status) {
+        fetch(`/Cart/GetOrderItems?orderId=${orderId}`)
+            .then(res => res.json())
+            .then(data => {
+                let html = '';
+                data.forEach(item => {
+                    let safeProductName = item.productName.replace(/'/g, "\\'");
+                    
+                    // Kiểm tra trạng thái để ẩn nút vàng hoặc hiện Badge xám Đã đánh giá
+                    let actionHtml = '';
+                    if (status === 'Đã giao') {
+                        if (item.isReviewed || item.IsReviewed) {
+                            actionHtml = `
+                                <span class="badge bg-light text-muted border rounded-pill px-3 py-2 fw-normal" style="font-size: 0.75rem;">
+                                    <i class="fas fa-check text-success me-1"></i> Đã đánh giá
+                                </span>`;
+                        } else {
+                            // Truyền thêm mã orderId vào hàm mở form chấm sao
+                            actionHtml = `<button class="btn btn-sm btn-outline-warning rounded-pill fw-bold" onclick="openRatingForm(${item.productId}, '${safeProductName}', '${orderId}')">Đánh giá</button>`;
+                        }
+                    }
+
+                    html += `
+                    <div class="d-flex align-items-center justify-content-between mb-3 p-2 border-bottom">
+                        <div class="d-flex align-items-center">
+                            <img src="${item.imageUrl}" class="rounded-3 me-2" style="width:45px; height:45px; object-fit:cover;" onerror="this.src='https://cdn-icons-png.flaticon.com/512/924/924514.png'">
+                            <div>
+                                <div class="fw-bold small">${item.productName}</div>
+                                <div class="text-muted" style="font-size:10px">${item.price.toLocaleString()}đ</div>
+                            </div>
+                        </div>
+                        ${actionHtml}
+                    </div>`;
+                });
+                document.getElementById('itemsContainer').innerHTML = html;
+                
+                var modalItemsEl = document.getElementById('modalItems');
+                var modalItems = bootstrap.Modal.getInstance(modalItemsEl) || new bootstrap.Modal(modalItemsEl);
+                modalItems.show();
+            });
+    }
+
+    // 🌟 NÂNG CẤP: Hàm mở form hứng thêm tham số oid (mã đơn hàng)
+    function openRatingForm(pid, pname, oid) {
+        selectedProductId = pid;
+        selectedOrderId = oid; // Cất mã đơn hàng vào đây để lát nữa gửi đi
+        document.getElementById('reviewProdName').innerText = pname;
+        
+        // Reset trạng thái form chấm sao
+        document.getElementById('reviewStarValue').value = "0";
+        document.getElementById('reviewCommentText').value = "";
+        document.querySelectorAll('.star-rating i').forEach(s => s.className = 'far fa-star');
+
+        var modalItemsEl = document.getElementById('modalItems');
+        var modalItems = bootstrap.Modal.getInstance(modalItemsEl);
+        if (modalItems) modalItems.hide();
+
+        var modalReviewEl = document.getElementById('modalReview');
+        var modalReview = bootstrap.Modal.getInstance(modalReviewEl) || new bootstrap.Modal(modalReviewEl);
+        modalReview.show();
+    }
+
+    // Đăng ký sự kiện click chọn số sao vàng
+    document.querySelectorAll('.star-rating').forEach(star => {
+        star.onclick = function() {
+            let val = this.getAttribute('data-value');
+            document.getElementById('reviewStarValue').value = val;
+            document.querySelectorAll('.star-rating i').forEach((s, index) => {
+                s.className = (index < val) ? 'fas fa-star' : 'far fa-star';
+            });
+        };
+    });
+
+    function submitReviewFinal() {
+        const star = document.getElementById('reviewStarValue').value;
+        const comment = document.getElementById('reviewCommentText').value;
+        if (star == 0) return Swal.fire('Ơ kìa!', 'Boss chưa chọn sao kìa! 🥰', 'warning');
+
+        fetch('/Products/SubmitReview', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            // 🌟 NÂNG CẤP: Bơm thêm thuộc tính orderId gửi lên Controller để lưu xuống DB
+            body: new URLSearchParams({ 
+                productId: selectedProductId, 
+                orderId: selectedOrderId, 
+                customerName: '@Html.Raw(ViewBag.FullName)', 
+                rating: star, 
+                comment: comment 
+            })
+        })
+        .then(res => res.json())
+        .then(res => {
+            if (res.success) {
+                Swal.fire('Thành công!', 'Cảm ơn Boss đã đánh giá 🥰', 'success').then(() => {
+                    // Tự động vẽ lại danh sách món ăn để nút vàng biến hình thành chữ Đã đánh giá ngay lập tức
+                    viewOrderItems(selectedOrderId, 'Đã giao');
+                });
+                
+                var modalReviewEl = document.getElementById('modalReview');
+                var modalReview = bootstrap.Modal.getInstance(modalReviewEl);
+                if (modalReview) modalReview.hide();
+            } else {
+                Swal.fire('Thất bại', res.message || 'Đã xảy ra lỗi hệ thống.', 'error');
+            }
+        });
+    }
+</script>
+}

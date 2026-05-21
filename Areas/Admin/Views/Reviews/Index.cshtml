@@ -1,0 +1,96 @@
+@model List<dynamic>
+@{
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml"; // Đường dẫn layout admin của Boss
+    ViewData["Title"] = "Quản lý đánh giá sản phẩm";
+}
+
+@* --- NHÚNG DỰ PHÒNG SWEETALERT2 NGAY TẠI TRANG NÀY ĐỂ ĐẢM BẢO CHẠY ĐƯỢC 100% --- *@
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<div class="container-fluid px-4 py-4">
+    <h3 class="fw-bold mb-4 text-dark"><i class="fas fa-star text-warning me-2"></i> Quản lý phản hồi khách hàng</h3>
+
+    <div class="card border-0 shadow-sm rounded-4 p-4">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Khách hàng</th>
+                        <th>Sản phẩm</th>
+                        <th>Số sao</th>
+                        <th>Nội dung bình luận</th>
+                        <th>Ngày gửi</th>
+                        <th class="text-center">Hành động</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model != null && Model.Any()) {
+                        foreach (var rev in Model) {
+                            <tr>
+                                 <td class="fw-bold">@Html.Raw(rev.Customer)</td>
+                                <td><span class="badge bg-secondary bg-opacity-10 text-dark">@rev.ProductName</span></td>
+                                <td class="text-warning">
+                                    @for (int i = 1; i <= 5; i++) {
+                                        if (i <= rev.Stars) { <i class="fas fa-star"></i> } 
+                                        else { <i class="far fa-star"></i> }
+                                    }
+                                </td>
+                                <td class="small text-muted" style="max-width: 300px;">@rev.Comment</td>
+                                <td class="small">@rev.Date.ToString("dd/MM/yyyy HH:mm")</td>
+                                <td class="text-center">
+                                    <form asp-action="DeleteReview" asp-route-id="@rev.Id" id="form-delete-@rev.Id" method="post">
+                                        <button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-3" onclick="confirmDelete('@rev.Id')">
+                                            <i class="fas fa-trash-alt me-1"></i> Xóa
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    } else {
+                        <tr>
+                            <td colspan="6" class="text-center py-4 text-muted">Chưa có đánh giá nào từ Boss lớn khách hàng cả ạ. ☕</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@* --- THẢ TỰ DO ĐOẠN SCRIPT XUỐNG ĐÂY ĐỂ CHẠY TRỰC TIẾP KHÔNG PHỤ THUỘC LAYOUT --- *@
+<script>
+    function confirmDelete(reviewId) {
+        Swal.fire({
+            title: '<span style="color: #3d2b1f; font-family: \'Quicksand\', sans-serif;">Boss có chắc chắn...</span>',
+            html: 'Boss có chắc muốn <b style="color: #cd7f32;">xóa</b> đánh giá này không ? 🥺',
+            icon: 'warning',
+            iconColor: '#cd7f32', 
+            showCancelButton: true,
+            confirmButtonColor: '#3d2b1f', 
+            cancelButtonColor: '#f8f9fa',
+            confirmButtonText: 'XÓA NGAY! 🗑️',
+            cancelButtonText: '<span style="color: #333;">BỎ QUA</span>',
+            background: '#fff',
+            backdrop: 'rgba(61,43,31,0.6)', 
+            customClass: {
+                confirmButton: 'rounded-pill fw-bold text-uppercase px-4 me-2',
+                cancelButton: 'rounded-pill border fw-bold text-uppercase px-4'
+            },
+            buttonsStyling: true
+        }).then((result) => {
+            if (result.isConfirmed) {
+                Swal.fire({
+                    title: 'Đang xử lý...',
+                    text: 'Bé Phin đang dọn dẹp data bạnn nhóo! 🥰',
+                    icon: 'success',
+                    showConfirmButton: false,
+                    timer: 1000
+                });
+
+                setTimeout(() => {
+                    document.getElementById('form-delete-' + reviewId).submit();
+                }, 1000);
+            }
+        });
+    }
+</script>

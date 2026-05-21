@@ -1,0 +1,220 @@
+@model List<CoffeeHouseAdmin.Models.CartItem>
+
+@{
+    // --- 1. KHAI BÁO TẤT CẢ BIẾN Ở ĐẦU FILE ĐỂ TRÁNH LỖI ---
+    var subtotal = Model.Sum(i => i.Total);
+    
+    // Lấy tiền giảm từ ViewBag (mà Controller đã gửi sang)
+    var discount = ViewBag.DiscountAmount ?? 0m; 
+    var finalTotal = subtotal - (decimal)discount;
+    if (finalTotal < 0) finalTotal = 0;
+    
+    var promoCode = ViewBag.AppliedPromoCode ?? ""; 
+    var tableId = ViewBag.TableId;
+    var isTableCustomer = !string.IsNullOrEmpty(tableId);
+    var defaultAddr = ViewBag.DefaultAddress as CoffeeHouseAdmin.Models.CustomerAddress;
+}
+
+<div class="container py-4" style="max-width: 900px;">
+    
+    <div class="mb-4">
+        <a href="/Cart" class="text-decoration-none text-muted fw-bold d-inline-flex align-items-center">
+            <i class="fas fa-arrow-left me-2"></i> Quay lại giỏ hàng
+        </a>
+    </div>
+
+    <h3 class="fw-bold mb-4" style="color: #3d2b1f;">
+        <i class="fas fa-check-circle me-2 text-success"></i> 
+        @(isTableCustomer ? "Xác nhận gọi món tại bàn" : "Xác nhận thanh toán")
+    </h3>
+
+    <form asp-action="ProcessCheckout" id="paymentForm" method="post">
+        
+        @* --- GỬI THÔNG TIN VOUCHER NGẦM VỀ CONTROLLER (GIỮ LẠI KHỐI NÀY) --- *@
+        <input type="hidden" name="promoCode" value="@promoCode" />
+        <input type="hidden" name="discountAmount" value="@discount" />
+
+        <div class="row g-4">
+            
+            @* --- CỘT TRÁI: TÓM TẮT ĐƠN HÀNG --- *@
+            <div class="col-md-7">
+                <div class="card border-0 shadow-sm p-4" style="border-radius: 20px;">
+                    <h5 class="fw-bold mb-3">Món đã chọn</h5>
+                    <div class="table-responsive">
+                        <table class="table align-middle">
+                            <thead class="text-muted small">
+                                <tr>
+                                    <th>SẢN PHẨM</th>
+                                    <th class="text-center">SL</th>
+                                    <th class="text-end">THÀNH TIỀN</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in Model) {
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <img src="@item.Image" class="rounded-3 shadow-sm me-3" 
+                                                     style="width: 50px; height: 50px; object-fit: cover;" 
+                                                     onerror="this.src='https://cdn-icons-png.flaticon.com/512/924/924514.png'">
+                                                <div class="fw-bold" style="color: #3d2b1f;">@(item.Name ?? "Sản phẩm")</div>
+                                            </div>
+                                        </td>
+                                        <td class="text-center text-muted">x@(item.Quantity)</td>
+                                        <td class="text-end fw-bold">@item.Total.ToString("N0")đ</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <hr class="opacity-25">
+
+                    @* --- PHẦN HIỂN THỊ CHI TIẾT TIỀN ĐÃ ĐỒNG BỘ CHUẨN --- *@
+                    <div class="mt-3">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="text-muted small">Tạm tính:</span>
+                            <span class="fw-bold">@subtotal.ToString("N0")đ</span>
+                        </div>
+
+                        @if ((decimal)discount > 0)
+                        {
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="text-muted small">Giảm giá (Voucher):</span>
+                                <span class="fw-bold text-success">-@(((decimal)discount).ToString("N0"))đ</span>
+                            </div>
+                        }
+
+                        <hr class="opacity-25">
+
+                        <div class="d-flex justify-content-between align-items-center mt-2">
+                            <span class="fw-bold text-muted">TỔNG CỘNG:</span>
+                            <h4 class="fw-bold text-danger mb-0">@finalTotal.ToString("N0")đ</h4>
+                        </div>
+                        @* ĐÃ XÓA KHỐI INPUT TRÙNG LẶP Ở ĐÂY ĐỂ TRÁNH LỖI HỆ THỐNG GIỮ NGUYÊN FORM ĐẸP CỦA BOSS *@
+                    </div>
+                </div>
+            </div>
+
+            @* --- CỘT PHẢI: THÔNG TIN ĐỊA CHỈ & THANH TOÁN (GIỮ NGUYÊN 100%) --- *@
+            <div class="col-md-5">
+                
+                @* 1. Khối thông tin địa chỉ *@
+                <div class="card border-0 shadow-sm p-4 mb-3" style="border-radius: 20px;">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="fw-bold mb-0">Thông tin đơn hàng</h5>
+                        @if (!isTableCustomer)
+                        {
+                            <a href="@Url.Action("ManageAddresses", "Cart")" class="text-primary small text-decoration-none fw-bold">Thay đổi</a>
+                        }
+                    </div>
+                    
+                    @if (isTableCustomer)
+                    {
+                        <div class="alert alert-warning border-0 shadow-sm mb-4" style="border-radius: 12px; background-color: #fff9f0;">
+                            <i class="fas fa-map-marker-alt me-2 text-warning"></i>
+                            Phục vụ trực tiếp tại <b>Bàn @tableId</b>
+                        </div>
+
+                        <input type="hidden" name="fullName" value="Khách tại bàn @tableId" />
+                        <input type="hidden" name="phone" value="Tại quán" />
+                        <input type="hidden" name="address" value="Bàn @tableId" />
+                        <input type="hidden" name="paymentMethod" value="COD" /> 
+                        
+                        <p class="text-center text-muted small">Nhân viên sẽ mang món ra tận nơi cho Boss nhé! 🥰</p>
+                    }
+                    else
+                    {
+                        @if (defaultAddr != null)
+                        {
+                            <div class="address-display p-3 rounded-4 border mb-3" style="background-color: #fdfaf7; border-style: dashed !important; border-color: #ee4d2d !important;">
+                                <div class="d-flex align-items-center mb-2 text-danger">
+                                    <i class="fas fa-truck-moving me-2"></i>
+                                    <span class="small fw-bold uppercase">Địa chỉ nhận hàng</span>
+                                </div>
+                                <div class="fw-bold text-dark">@defaultAddr.ReceiverName | @defaultAddr.PhoneNumber</div>
+                                <div class="text-muted small mt-1">@defaultAddr.AddressDetail</div>
+
+                                <input type="hidden" name="fullName" value="@defaultAddr.ReceiverName" />
+                                <input type="hidden" name="phone" value="@defaultAddr.PhoneNumber" />
+                                <input type="hidden" name="address" value="@defaultAddr.AddressDetail" />
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="text-center py-4 border rounded-4 mb-3" style="border-style: dashed !important;">
+                                <i class="fas fa-map-marked-alt fa-2x text-muted mb-2"></i>
+                                <p class="small text-muted mb-3">Boss chưa có địa chỉ giao hàng rồi!</p>
+                                <a href="@Url.Action("ManageAddresses", "Cart")" class="btn btn-outline-danger btn-sm rounded-pill px-4">
+                                    + Thêm địa chỉ mới
+                                </a>
+                            </div>
+                        }
+                    }
+                </div>
+
+                @* 2. Khối Thanh toán (Chỉ hiện cho khách Online) *@
+                @if (!isTableCustomer)
+                {
+                    <div class="list-group">
+                        <label class="list-group-item d-flex align-items-center py-3 border shadow-sm mb-2 cursor-pointer" style="border-radius: 12px;">
+                            <input class="form-check-input me-3" type="radio" name="paymentMethod" value="COD" checked>
+                            <div class="bg-success text-white rounded-1 px-2 me-3 small fw-bold">COD</div>
+                            <span class="fw-bold small">Thanh toán khi nhận hàng</span>
+                        </label>
+
+                        <label class="list-group-item d-flex align-items-center py-3 border shadow-sm mb-2 cursor-pointer" style="border-radius: 12px;">
+                            <input class="form-check-input me-3" type="radio" name="paymentMethod" value="Momo">
+                            <img src="/img/MoMo_Logo_App.svg.png" width="30" height="30" class="me-3 rounded-2 shadow-sm">
+                            <span class="fw-bold small">Ví điện tử MoMo</span>
+                        </label>
+
+                        <label class="list-group-item d-flex align-items-center py-3 border shadow-sm mb-2 cursor-pointer" style="border-radius: 12px;">
+                            <input class="form-check-input me-3" type="radio" name="paymentMethod" value="ZaloPay">
+                            <img src="/img/images.png" width="30" height="30" class="me-3 rounded-2 shadow-sm">
+                            <span class="fw-bold small">Ví điện tử ZaloPay</span>
+                        </label>
+                    </div>
+                }
+
+                @* Nút GỬI ĐƠN *@
+                <button type="submit" form="paymentForm" class="btn btn-danger w-100 py-3 fw-bold shadow-sm" 
+                        style="background-color: #3d2b1f; border: none; border-radius: 15px;"
+                        @(!isTableCustomer && defaultAddr == null ? "disabled" : "")>
+                    @(isTableCustomer ? "GỌI MÓN NGAY ☕" : "TIẾP TỤC ĐẶT HÀNG")
+                </button>
+                
+                @if (!isTableCustomer && defaultAddr == null)
+                {
+                    <p class="text-danger text-center small mt-2">Vui lòng thêm địa chỉ để tiếp tục Boss nhé! 🥺</p>
+                }
+                
+                <p class="text-center text-muted mt-3 mb-0" style="font-size: 11px;">
+                    <i class="fas fa-shield-alt me-1 text-success"></i> Bé Phin bảo mật thông tin cho Boss 100%
+                </p>
+            </div>
+        </div>
+    </form>
+</div>
+
+<style>
+    .cursor-pointer { cursor: pointer; transition: 0.2s; }
+    .cursor-pointer:hover { background-color: #f8f9fa; transform: translateY(-2px); }
+    .form-check-input:checked { background-color: #3d2b1f; border-color: #3d2b1f; }
+    .list-group-item { border: 1px solid #f0f0f0 !important; }
+    .btn-danger:hover { background-color: #5a4030 !important; }
+    .address-display { transition: 0.3s; }
+    .address-display:hover { background-color: #fff !important; cursor: default; }
+
+    .address-display {
+        border: 2px dashed #984534 !important;
+        position: relative;
+    }
+    .address-display::before {
+        content: "📍";
+        position: absolute;
+        right: 15px;
+        top: 15px;
+        font-size: 1.2rem;
+    }
+</style>

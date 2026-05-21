@@ -1,0 +1,146 @@
+﻿@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<div class="container-fluid px-4 py-3">
+    <div class="mb-4">
+        <h2 class="fw-bold m-0" style="color: #3d2b1f;">Dashboard</h2>
+        <small class="text-muted">Dữ liệu kinh doanh thời gian thực từ Coffee House</small>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm p-4 h-100" style="border-radius: 20px;">
+                <div class="d-flex justify-content-between mb-3">
+                    <div class="p-3 rounded-3" style="background:#28a74520; color:#28a745;"><i class="fas fa-dollar-sign fa-lg"></i></div>
+                    <span class="small fw-bold text-success">+12.5%</span>
+                </div>
+                <small class="text-muted fw-bold">Doanh thu</small>
+                <h3 class="fw-bold m-0 mt-1">@string.Format("{0:N0}đ", ViewBag.TotalRevenue)</h3>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm p-4 h-100" style="border-radius: 20px;">
+                <div class="d-flex justify-content-between mb-3">
+                    <div class="p-3 rounded-3" style="background:#007bff20; color:#007bff;"><i class="fas fa-shopping-bag fa-lg"></i></div>
+                    <span class="small fw-bold text-primary">+8.2%</span>
+                </div>
+                <small class="text-muted fw-bold">Đơn hàng</small>
+                <h3 class="fw-bold m-0 mt-1">@ViewBag.TotalOrders</h3>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm p-4 h-100" style="border-radius: 20px;">
+                <div class="d-flex justify-content-between mb-3">
+                    <div class="p-3 rounded-3" style="background:#a55eea20; color:#a55eea;"><i class="fas fa-users fa-lg"></i></div>
+                    <span class="small fw-bold" style="color:#a55eea;">+15.3%</span>
+                </div>
+                <small class="text-muted fw-bold">Khách hàng</small>
+                <h3 class="fw-bold m-0 mt-1">@ViewBag.TotalCustomers</h3>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm p-4 h-100" style="border-radius: 20px;">
+                <div class="d-flex justify-content-between mb-3">
+                    <div class="p-3 rounded-3" style="background:#fd7e1420; color:#fd7e14;"><i class="fas fa-robot fa-lg"></i></div>
+                    <span class="small fw-bold text-warning">+22.1%</span>
+                </div>
+                <small class="text-muted fw-bold">AI Chat</small>
+                <h3 class="fw-bold m-0 mt-1">@ViewBag.TotalAI</h3>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm p-4 mb-4" style="border-radius: 20px;">
+        <h5 class="fw-bold mb-4">Biểu đồ doanh thu (7 ngày gần nhất)</h5>
+        <canvas id="revenueChart" style="max-height: 300px;"></canvas>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-md-8">
+            <div class="card border-0 shadow-sm p-4 h-100" style="border-radius: 20px;">
+                <h5 class="fw-bold mb-4">Sản phẩm bán chạy</h5>
+                <div class="list-group list-group-flush">
+                    @if (ViewBag.TopProducts != null) {
+                        int rank = 1;
+                        foreach (var p in ViewBag.TopProducts) {
+                            <div class="d-flex align-items-center justify-content-between py-3 border-bottom">
+                                <div class="d-flex align-items-center">
+                                    <span class="badge rounded-circle me-3 d-flex align-items-center justify-content-center" 
+                                          style="width:30px; height:30px; background:#4b3621; color: white;">@rank</span>
+                                    <div>
+                                        <div class="fw-bold">@p.Name</div>
+                                        <small class="text-muted">@p.Qty</small>
+                                    </div>
+                                </div>
+                                <div class="fw-bold">@p.Rev</div>
+                            </div>
+                            rank++;
+                        }
+                    } else {
+                        <p class="text-center text-muted py-5">Chưa có dữ liệu bán hàng</p>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="row g-3">
+                <div class="col-12">
+                    <div class="card border-0 shadow-sm p-4 text-white shadow-hover" style="border-radius: 20px; background: #4b3621;">
+                        <i class="fas fa-box fa-2x mb-3"></i>
+                        <small class="opacity-75">Sản phẩm đang bán</small>
+                        <h2 class="fw-bold m-0">@ViewBag.ProductsCount</h2>
+                    </div>
+                </div>
+                <div class="col-12">
+                    <div class="card border-0 shadow-sm p-4 text-white" style="border-radius: 20px; background: #00b894;">
+                        <i class="fas fa-shopping-cart fa-2x mb-3"></i>
+                        <small class="opacity-75">Đơn hàng hôm nay</small>
+                        <h2 class="fw-bold m-0">@ViewBag.OrdersToday</h2>
+                    </div>
+                </div>
+                <div class="col-12">
+                    <div class="card border-0 shadow-sm p-4 text-white" style="border-radius: 20px; background: #a55eea;">
+                        <i class="fas fa-comment fa-2x mb-3"></i>
+                        <small class="opacity-75">AI Chat hôm nay</small>
+                        <h2 class="fw-bold m-0">@ViewBag.AIChatToday</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        const ctx = document.getElementById('revenueChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: @Html.Raw(ViewBag.ChartLabels ?? "[]"),
+                datasets: [{
+                    label: 'Doanh thu (Triệu)',
+                    data: @Html.Raw(ViewBag.ChartValues ?? "[]"),
+                    borderColor: '#4b3621',
+                    backgroundColor: 'rgba(75, 54, 33, 0.1)',
+                    borderWidth: 3,
+                    tension: 0.4,
+                    fill: true,
+                    pointRadius: 5,
+                    pointBackgroundColor: '#4b3621'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true, ticks: { callback: v => v + 'M' }, grid: { color: '#f0f0f0' } },
+                    x: { grid: { display: false } }
+                }
+            }
+        });
+    </script>
+}

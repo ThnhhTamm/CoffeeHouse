@@ -70,32 +70,50 @@ namespace CoffeeHouseAdmin.Controllers
 
             var products = await query.ToListAsync();
 
-            // --- 3. BỐC THỐNG KÊ SAO TỰ ĐỘNG LẤY TÊN BẢNG THỰC TẾ ---
+            // --- 3. BỐC THỐNG KÊ SAO BẰNG CÚ PHÁP BAO BIỆN POSTGRES ---
             var reviewStats = new Dictionary<int, (double Avg, int Count)>();
             string connString = GetSafeConnectionString();
             
-            // Tự động bốc tên bảng thực tế mà EF Core đã tạo (bao chạy 100%)
-            var entityType = _context.Model.FindEntityType(typeof(ProductReview));
-            string tableName = entityType.GetTableName(); 
-
             using (NpgsqlConnection conn = new NpgsqlConnection(connString))
             {
-                // Sử dụng dấu ngoặc kép bọc quanh tên bảng và tên cột chuẩn cấu trúc Postgres
-                string sqlStats = $@"SELECT ""ProductId"", AVG(CAST(""Rating"" AS DECIMAL(18,1))) AS AvgRating, COUNT(*) AS ReviewCount 
-                                    FROM ""{tableName}"" 
+                // Thử bốc với tên bảng viết hoa chuẩn Entity Framework Core
+                string sqlStats = @"SELECT ""ProductId"", AVG(CAST(""Rating"" AS DECIMAL(18,1))) AS AvgRating, COUNT(*) AS ReviewCount 
+                                    FROM ""ProductReviews"" 
                                     GROUP BY ""ProductId""";
-
-                using (NpgsqlCommand cmdStats = new NpgsqlCommand(sqlStats, conn))
+                try
                 {
-                    conn.Open();
-                    using (var rdrStats = cmdStats.ExecuteReader())
+                    using (NpgsqlCommand cmdStats = new NpgsqlCommand(sqlStats, conn))
                     {
-                        while (rdrStats.Read())
+                        conn.Open();
+                        using (var rdrStats = cmdStats.ExecuteReader())
                         {
-                            int pid = Convert.ToInt32(rdrStats["ProductId"]);
-                            double avg = Convert.ToDouble(rdrStats["AvgRating"]);
-                            int count = Convert.ToInt32(rdrStats["ReviewCount"]);
-                            reviewStats[pid] = (avg, count);
+                            while (rdrStats.Read())
+                            {
+                                int pid = Convert.ToInt32(rdrStats["ProductId"]);
+                                double avg = Convert.ToDouble(rdrStats["AvgRating"]);
+                                int count = Convert.ToInt32(rdrStats["ReviewCount"]);
+                                reviewStats[pid] = (avg, count);
+                            }
+                        }
+                    }
+                }
+                catch (PostgresException ex) when (ex.SqlState == "42P01") // Nếu báo thiếu bảng viết hoa, tự động quay xe bốc bảng viết thường
+                {
+                    string fallbackSql = @"SELECT ""productid"", AVG(CAST(""rating"" AS DECIMAL(18,1))) AS AvgRating, COUNT(*) AS ReviewCount 
+                                           FROM ""productreviews"" 
+                                           GROUP BY ""productid""";
+                    using (NpgsqlCommand cmdFallback = new NpgsqlCommand(fallbackSql, conn))
+                    {
+                        if (conn.State != System.Data.ConnectionState.Open) conn.Open();
+                        using (var rdrStats = cmdFallback.ExecuteReader())
+                        {
+                            while (rdrStats.Read())
+                            {
+                                int pid = Convert.ToInt32(rdrStats["productid"]);
+                                double avg = Convert.ToDouble(rdrStats["avgrating"]);
+                                int count = Convert.ToInt32(rdrStats["reviewcount"]);
+                                reviewStats[pid] = (avg, count);
+                            }
                         }
                     }
                 }
@@ -105,7 +123,7 @@ namespace CoffeeHouseAdmin.Controllers
             return View(products);
         }
 
-        // --- 4. BỔ SUNG LẤY REVIEW SẢN PHẨM TỰ ĐỘNG LẤY TÊN BẢNG ---
+        // --- 4. BỔ SUNG LẤY REVIEW SẢN PHẨM CƠ CHẾ BAO BIỆN ---
         [HttpGet]
         public async Task<IActionResult> GetProductReviews(int productId)
         {
@@ -113,27 +131,46 @@ namespace CoffeeHouseAdmin.Controllers
             string connString = GetSafeConnectionString();
             
             try {
-                var entityType = _context.Model.FindEntityType(typeof(ProductReview));
-                string tableName = entityType.GetTableName();
-
                 using (NpgsqlConnection conn = new NpgsqlConnection(connString)) {
-                    string sql = $@"SELECT ""CustomerName"", ""Rating"", ""Comment"", ""CreatedAt"" 
-                                   FROM ""{tableName}"" 
+                    string sql = @"SELECT ""CustomerName"", ""Rating"", ""Comment"", ""CreatedAt"" 
+                                   FROM ""ProductReviews"" 
                                    WHERE ""ProductId"" = @pid 
                                    ORDER BY ""CreatedAt"" DESC";
-                                   
-                    using (NpgsqlCommand cmd = new NpgsqlCommand(sql, conn)) {
-                        cmd.Parameters.AddWithValue("@pid", productId);
-                        await conn.OpenAsync();
-                        
-                        using (var reader = await cmd.ExecuteReaderAsync()) {
-                            while (await reader.ReadAsync()) {
-                                reviews.Add(new {
-                                    customer = reader["CustomerName"].ToString(),
-                                    rating = Convert.ToInt32(reader["Rating"]),
-                                    comment = reader["Comment"] != DBNull.Value ? reader["Comment"].ToString() : "",
-                                    date = ((DateTime)reader["CreatedAt"]).ToString("dd/MM/yyyy HH:mm")
-                                });
+                    try
+                    {
+                        using (NpgsqlCommand cmd = new NpgsqlCommand(sql, conn)) {
+                            cmd.Parameters.AddWithValue("@pid", productId);
+                            await conn.OpenAsync();
+                            using (var reader = await cmd.ExecuteReaderAsync()) {
+                                while (await reader.ReadAsync()) {
+                                    reviews.Add(new {
+                                        customer = reader["CustomerName"].ToString(),
+                                        rating = Convert.ToInt32(reader["Rating"]),
+                                        comment = reader["Comment"] != DBNull.Value ? reader["Comment"].ToString() : "",
+                                        date = ((DateTime)reader["CreatedAt"]).ToString("dd/MM/yyyy HH:mm")
+                                    });
+                                }
+                            }
+                        }
+                    }
+                    catch (PostgresException ex) when (ex.SqlState == "42P01") // Quay xe bốc chữ thường nếu bảng hoa không có
+                    {
+                        string fallbackSql = @"SELECT ""customername"", ""rating"", ""comment"", ""createdat"" 
+                                               FROM ""productreviews"" 
+                                               WHERE ""productid"" = @pid 
+                                               ORDER BY ""createdat"" DESC";
+                        using (NpgsqlCommand cmdFallback = new NpgsqlCommand(fallbackSql, conn)) {
+                            cmdFallback.Parameters.AddWithValue("@pid", productId);
+                            if (conn.State != System.Data.ConnectionState.Open) await conn.OpenAsync();
+                            using (var reader = await cmdFallback.ExecuteReaderAsync()) {
+                                while (await reader.ReadAsync()) {
+                                    reviews.Add(new {
+                                        customer = reader["customername"].ToString(),
+                                        rating = Convert.ToInt32(reader["rating"]),
+                                        comment = reader["comment"] != DBNull.Value ? reader["comment"].ToString() : "",
+                                        date = ((DateTime)reader["createdat"]).ToString("dd/MM/yyyy HH:mm")
+                                    });
+                                }
                             }
                         }
                     }

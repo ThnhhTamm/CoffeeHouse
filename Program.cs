@@ -28,6 +28,8 @@ builder.Services.AddSession(options => {
 });
 
 // Cấu hình Đăng nhập (Google & Facebook)
+
+// Cấu hình Đăng nhập (Google & Facebook) - ĐÃ VÁ ĐỦ HÀM ADDAUTHENTICATION
 builder.Services.AddAuthentication(options => {
     options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
     options.DefaultChallengeScheme = GoogleDefaults.AuthenticationScheme;

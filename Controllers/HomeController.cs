@@ -21,9 +21,10 @@ namespace CoffeeHouseAdmin.Controllers
 
         // Hàm tiện ích để lấy chuỗi kết nối an toàn tuyệt đối, dán cứng mật khẩu bảo mật Render
        // Hàm tiện ích lấy chuỗi kết nối NỘI BỘ SIÊU TỐC - Không sợ bị ngắt SSL ngang xương
+// Hàm lấy chuỗi kết nối NỘI BỘ + KÍCH HOẠT SSL TIÊU CHUẨN RENDER
 private string GetSafeConnectionString()
 {
-    return "Server=dpg-d87m9p67r5hc738ph9u0-a.singapore-postgres.render.com;Database=coffeehousedb;Port=5432;User Id=coffeehousedb_user;Password=g5EGgOlb4B0ro32QE8ZTS9rFilgcUBKM;SslMode=Disable;Trust Server Certificate=true;";
+    return "Server=dpg-d87m9p67r5hc738ph9u0-a.singapore-postgres.render.com;Database=coffeehousedb;Port=5432;User Id=coffeehousedb_user;Password=g5EGgOlb4B0ro32QE8ZTS9rFilgcUBKM;SslMode=Require;Trust Server Certificate=true;";
 }
 
         public async Task<IActionResult> Index(string search, string category, string priceRange, string tableId)

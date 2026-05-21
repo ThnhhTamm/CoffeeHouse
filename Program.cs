@@ -17,8 +17,9 @@ builder.Services.AddHttpContextAccessor();
 
 // Kết nối Database PostgreSQL trên Render (Đã đóng ngoặc }); đầy đủ)
 // Kết nối Database PostgreSQL nội bộ trên Render
+// Kết nối Database PostgreSQL nội bộ có SSL trên Render
 builder.Services.AddDbContext<ApplicationDbContext>(options => {
-    options.UseNpgsql("Server=dpg-d87m9p67r5hc738ph9u0-a.singapore-postgres.render.com;Database=coffeehousedb;Port=5432;User Id=coffeehousedb_user;Password=g5EGgOlb4B0ro32QE8ZTS9rFilgcUBKM;SslMode=Disable;Trust Server Certificate=true;");
+    options.UseNpgsql("Server=dpg-d87m9p67r5hc738ph9u0-a.singapore-postgres.render.com;Database=coffeehousedb;Port=5432;User Id=coffeehousedb_user;Password=g5EGgOlb4B0ro32QE8ZTS9rFilgcUBKM;SslMode=Require;Trust Server Certificate=true;");
 });
 
 // Cấu hình Session

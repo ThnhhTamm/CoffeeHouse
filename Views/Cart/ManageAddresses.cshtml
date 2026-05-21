@@ -169,7 +169,7 @@
             console.log("Đang gửi dữ liệu:", result.value); // Để Boss soi trong F12
 
             $.ajax({
-                url: '/Cart/AddAddress', // Thử dùng đường dẫn trực tiếp nếu @Url.Action bị lỗi
+                url: '/Cart/AddAddress', // Thử dùng đường dẫn trực tiếp nếu url: '@Url.Action("ManageAddresses", "Cart")', bị lỗi
                 type: 'POST',
                 data: {
                     receiverName: result.value.name,
